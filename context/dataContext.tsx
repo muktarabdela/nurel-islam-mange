@@ -1,0 +1,103 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { studentService } from '@/lib/servies/student';
+import { StudentModel } from '@/models/Student';
+import { Attendance } from '@/models/Attendance';
+import { attendanceService } from '@/lib/servies/attendace';
+import { HifzWeeklyProgress } from '@/models/HifzProgress';
+import { hifzProgressService } from '@/lib/servies/hifz-progress';
+import { PunishmentModel } from '@/models/Punishment';
+import { punishmentService } from '@/lib/servies/punishment';
+import { UstathModel } from '@/models/ustath';
+import { ustathService } from '@/lib/servies/ustath';
+import { WeeklyTest } from '@/models/WeeklyTest';
+import { weeklyTestService } from '@/lib/servies/test';
+
+type DataContextType = {
+    students: StudentModel[];
+    attendance: Attendance[];
+    hifzProgress: HifzWeeklyProgress[];
+    punishments: PunishmentModel[];
+    ustaths: UstathModel[];
+    weeklyTests: WeeklyTest[];
+    loading: boolean;
+    error: string | null;
+    refreshData: () => Promise<void>;
+
+};
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+export function DataProvider({ children }: { children: ReactNode }) {
+    const [students, setStudents] = useState<StudentModel[]>([]);
+    const [attendance, setAttendance] = useState<Attendance[]>([]);
+    const [hifzProgress, setHifzProgress] = useState<HifzWeeklyProgress[]>([]);
+    const [punishments, setPunishments] = useState<PunishmentModel[]>([]);
+    const [ustaths, setUstaths] = useState<UstathModel[]>([]);
+    const [weeklyTests, setWeeklyTests] = useState<WeeklyTest[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchAllData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            // Fetch all data in parallel
+            const [studentsData, attendanceData, progressData, punishmentsData, ustathsData, weeklyTestsData] = await Promise.all([
+                studentService.getAll(),
+                attendanceService.getAll(),
+                hifzProgressService.getAll(),
+                punishmentService.getAll(),
+                ustathService.getAll(),
+                weeklyTestService.getWeeklyTests()
+            ]);
+
+            setStudents(studentsData);
+            setAttendance(attendanceData);
+            setHifzProgress(progressData);
+            setPunishments(punishmentsData);
+            setUstaths(ustathsData);
+            setWeeklyTests(weeklyTestsData);
+        } catch (err) {
+            console.error('Error fetching data:', err);
+            setError(err instanceof Error ? err.message : 'Failed to fetch data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAllData();
+    }, []);
+
+    const value = {
+        students,
+        attendance,
+        hifzProgress,
+        punishments,
+        ustaths,
+        weeklyTests,
+        loading,
+        error,
+        refreshData: fetchAllData,
+    };
+
+    return (
+        <DataContext.Provider value={value}>
+            {children}
+        </DataContext.Provider>
+    );
+}
+
+export const useData = (): DataContextType => {
+    const context = useContext(DataContext);
+    if (context === undefined) {
+        throw new Error('useData must be used within a DataProvider');
+    }
+    return context;
+};
+
+// Export a hook that can be used to directly access the context
+export default DataContext;
