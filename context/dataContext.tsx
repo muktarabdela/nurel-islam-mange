@@ -1,103 +1,112 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { studentService } from '@/lib/servies/student';
+
+// Models
 import { StudentModel } from '@/models/Student';
-import { Attendance } from '@/models/Attendance';
-import { attendanceService } from '@/lib/servies/attendace';
-import { HifzWeeklyProgress } from '@/models/HifzProgress';
-import { hifzProgressService } from '@/lib/servies/hifz-progress';
-import { PunishmentModel } from '@/models/Punishment';
-import { punishmentService } from '@/lib/servies/punishment';
-import { UstathModel } from '@/models/ustath';
-import { ustathService } from '@/lib/servies/ustath';
-import { WeeklyTest } from '@/models/WeeklyTest';
-import { weeklyTestService } from '@/lib/servies/test';
+import { AttendanceModel } from '@/models/Attendance';
+import { UstazModel } from '@/models/Ustaz';
+import { ClassModel } from '@/models/Class';
+import { BehaviorNoteModel } from '@/models/BehaviorNote';
+
+// Services
+import { studentService } from '@/lib/servies/studentService';
+import { attendanceService } from '@/lib/servies/attendanceService';
+import { ustazService } from '@/lib/servies/ustazService';
+import { classService } from '@/lib/servies/classService';
+import { behaviorNoteService } from '@/lib/servies/behaviorNoteService';
 
 type DataContextType = {
-    students: StudentModel[];
-    attendance: Attendance[];
-    hifzProgress: HifzWeeklyProgress[];
-    punishments: PunishmentModel[];
-    ustaths: UstathModel[];
-    weeklyTests: WeeklyTest[];
-    loading: boolean;
-    error: string | null;
-    refreshData: () => Promise<void>;
+  students: StudentModel[];
+  attendance: AttendanceModel[];
+  ustaz: UstazModel[];
+  classes: ClassModel[];
+  behaviorNotes: BehaviorNoteModel[];
 
+  loading: boolean;
+  error: string | null;
+
+  refreshData: () => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-    const [students, setStudents] = useState<StudentModel[]>([]);
-    const [attendance, setAttendance] = useState<Attendance[]>([]);
-    const [hifzProgress, setHifzProgress] = useState<HifzWeeklyProgress[]>([]);
-    const [punishments, setPunishments] = useState<PunishmentModel[]>([]);
-    const [ustaths, setUstaths] = useState<UstathModel[]>([]);
-    const [weeklyTests, setWeeklyTests] = useState<WeeklyTest[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
+  const [students, setStudents] = useState<StudentModel[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceModel[]>([]);
+  const [ustaz, setUstaz] = useState<UstazModel[]>([]);
+  const [classes, setClasses] = useState<ClassModel[]>([]);
+  const [behaviorNotes, setBehaviorNotes] = useState<BehaviorNoteModel[]>([]);
 
-    const fetchAllData = async () => {
-        try {
-            setLoading(true);
-            setError(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-            // Fetch all data in parallel
-            const [studentsData, attendanceData, progressData, punishmentsData, ustathsData, weeklyTestsData] = await Promise.all([
-                studentService.getAll(),
-                attendanceService.getAll(),
-                hifzProgressService.getAll(),
-                punishmentService.getAll(),
-                ustathService.getAll(),
-                weeklyTestService.getWeeklyTests()
-            ]);
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-            setStudents(studentsData);
-            setAttendance(attendanceData);
-            setHifzProgress(progressData);
-            setPunishments(punishmentsData);
-            setUstaths(ustathsData);
-            setWeeklyTests(weeklyTestsData);
-        } catch (err) {
-            console.error('Error fetching data:', err);
-            setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        } finally {
-            setLoading(false);
-        }
-    };
+      const [
+        studentsData,
+        ustazData,
+        classesData,
+        behaviorNotesData
+      ] = await Promise.all([
+        studentService.getAll(),
+        ustazService.getAll(),
+        classService.getAll(),
+        // NOTE: Behavior notes can be heavy → optional
+        // You can remove this if not needed globally
+        behaviorNoteService.getAll()
+      ]);
 
-    useEffect(() => {
-        fetchAllData();
-    }, []);
+      setStudents(studentsData);
+      setUstaz(ustazData);
+      setClasses(classesData);
+      setBehaviorNotes(behaviorNotesData);
 
-    const value = {
-        students,
-        attendance,
-        hifzProgress,
-        punishments,
-        ustaths,
-        weeklyTests,
-        loading,
-        error,
-        refreshData: fetchAllData,
-    };
+      // Attendance → load separately (better performance)
+      const today = new Date().toISOString().split('T')[0];
+      const attendanceData = await attendanceService.getByDate(today);
 
-    return (
-        <DataContext.Provider value={value}>
-            {children}
-        </DataContext.Provider>
-    );
+      setAttendance(attendanceData);
+
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const value: DataContextType = {
+    students,
+    attendance,
+    ustaz,
+    classes,
+    behaviorNotes,
+    loading,
+    error,
+    refreshData: fetchAllData,
+  };
+
+  return (
+    <DataContext.Provider value={value}>
+      {children}
+    </DataContext.Provider>
+  );
 }
 
 export const useData = (): DataContextType => {
-    const context = useContext(DataContext);
-    if (context === undefined) {
-        throw new Error('useData must be used within a DataProvider');
-    }
-    return context;
+  const context = useContext(DataContext);
+  if (!context) {
+    throw new Error('useData must be used within DataProvider');
+  }
+  return context;
 };
 
-// Export a hook that can be used to directly access the context
 export default DataContext;

@@ -1,12 +1,14 @@
-import { AttendanceStatus } from "./Student";
+/**
+ * Matches 'attendance_status' enum in database
+ */
+export type AttendanceStatus = 'present' | 'absent' | 'late';
 
-export interface Attendance {
-    id: string;
-    student_id: string;
-    date: string;
-    status: AttendanceStatus;
-    arrival_time: string | null;
-    lateness_in_minutes: number | null;
-    excuse: string | null;
-    punishment_id: string | null;
+export interface AttendanceModel {
+  id: string;
+  student_id: string;
+  class_id: string;
+  date: string; // YYYY-MM-DD
+  status: AttendanceStatus;
+  recorded_by: string | null; // ustaz_id
+  created_at: string;
 }

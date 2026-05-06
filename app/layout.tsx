@@ -1,5 +1,9 @@
 import "./globals.css";
-import { Inter, Manrope } from "next/font/google";
+import { Inter, Manrope, Geist } from "next/font/google";
+import { DataProvider } from "@/context/dataContext";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({ 
   subsets: ["latin"], 
@@ -24,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${manrope.variable}`}>
+    <html lang="en" className={cn(inter.variable, manrope.variable, "font-sans", geist.variable)}>
       <head>
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
@@ -33,7 +37,9 @@ export default function RootLayout({
       </head>
       {/* Base classes derived directly from the new HTML files */}
       <body className="bg-background text-on-background font-body-md min-h-screen antialiased">
-        {children}
+        <DataProvider>
+          {children}
+        </DataProvider>
       </body>
     </html>
   );

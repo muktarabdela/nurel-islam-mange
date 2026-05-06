@@ -1,5 +1,11 @@
 import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TrendingUp, TrendingDown, BarChart3, Calendar, Download, MoreHorizontal } from "lucide-react";
 
 export default function ReportsPage() {
   return (
@@ -24,161 +30,164 @@ export default function ReportsPage() {
             </div>
             
             {/* Date Range Picker */}
-            <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-lg p-1 shadow-ambient overflow-x-auto max-w-full">
-              <button className="px-4 py-2 rounded font-button text-button text-on-surface hover:bg-surface-container transition-colors whitespace-nowrap">
+            <div className="flex items-center gap-2 bg-muted rounded-lg p-1 shadow-sm overflow-x-auto max-w-full">
+              <Button variant="ghost" size="sm" className="whitespace-nowrap">
                 This Week
-              </button>
-              <button className="px-4 py-2 rounded font-button text-button text-on-surface bg-surface-container transition-colors whitespace-nowrap">
+              </Button>
+              <Button variant="secondary" size="sm" className="whitespace-nowrap">
                 This Month
-              </button>
-              <button className="px-4 py-2 rounded font-button text-button text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 whitespace-nowrap">
-                <span className="material-symbols-outlined text-[18px]">calendar_today</span>
+              </Button>
+              <Button variant="ghost" size="sm" className="flex items-center gap-2 whitespace-nowrap">
+                <Calendar className="h-4 w-4" />
                 Custom Date
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="mb-8 border-b border-outline-variant flex gap-6 overflow-x-auto">
-            <button className="pb-2 border-b-2 border-primary font-button text-button text-primary whitespace-nowrap">
-              Student Attendance
-            </button>
-            <button className="pb-2 border-b-2 border-transparent font-button text-button text-secondary hover:text-on-surface transition-colors whitespace-nowrap">
-              Ustaz Attendance
-            </button>
-            <button className="pb-2 border-b-2 border-transparent font-button text-button text-secondary hover:text-on-surface transition-colors whitespace-nowrap">
-              Summary
-            </button>
-          </div>
-
-          {/* Bento Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <Tabs defaultValue="student-attendance" className="mb-8">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="student-attendance">Student Attendance</TabsTrigger>
+              <TabsTrigger value="ustaz-attendance">Ustaz Attendance</TabsTrigger>
+              <TabsTrigger value="summary">Summary</TabsTrigger>
+            </TabsList>
             
-            {/* Chart Card */}
-            <div className="lg:col-span-2 bg-surface-container-lowest rounded-xl p-6 lg:p-lg shadow-ambient border border-slate-100">
-              <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-2">
-                <h3 className="font-h3 text-h3 text-on-surface">Daily Attendance Trends</h3>
-                <button className="text-secondary hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined">more_horiz</span>
-                </button>
-              </div>
-              
-              <div className="h-64 flex items-end gap-2 sm:gap-4 pt-8">
-                {/* Mock Bar Chart */}
-                <div className="flex-1 bg-surface-container rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "60%" }}>
-                  <div className="w-full bg-primary-fixed opacity-60 rounded-t-md group-hover:opacity-80 transition-opacity"></div>
-                  <span className="absolute -bottom-6 font-label-caps text-label-caps text-secondary">Mon</span>
-                </div>
-                <div className="flex-1 bg-surface-container rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "75%" }}>
-                  <div className="w-full bg-primary-fixed opacity-60 rounded-t-md group-hover:opacity-80 transition-opacity"></div>
-                  <span className="absolute -bottom-6 font-label-caps text-label-caps text-secondary">Tue</span>
-                </div>
-                <div className="flex-1 bg-surface-container rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "85%" }}>
-                  <div className="w-full bg-primary rounded-t-md"></div>
-                  <span className="absolute -bottom-6 font-label-caps text-label-caps text-on-surface">Wed</span>
-                </div>
-                <div className="flex-1 bg-surface-container rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "65%" }}>
-                  <div className="w-full bg-primary-fixed opacity-60 rounded-t-md group-hover:opacity-80 transition-opacity"></div>
-                  <span className="absolute -bottom-6 font-label-caps text-label-caps text-secondary">Thu</span>
-                </div>
-                <div className="flex-1 bg-surface-container rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "90%" }}>
-                  <div className="w-full bg-primary-fixed opacity-60 rounded-t-md group-hover:opacity-80 transition-opacity"></div>
-                  <span className="absolute -bottom-6 font-label-caps text-label-caps text-secondary">Fri</span>
-                </div>
-                <div className="flex-1 bg-surface-container rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "40%" }}>
-                  <div className="w-full bg-tertiary opacity-40 rounded-t-md group-hover:opacity-60 transition-opacity"></div>
-                  <span className="absolute -bottom-6 font-label-caps text-label-caps text-secondary">Sat</span>
-                </div>
-                <div className="flex-1 bg-surface-container rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "30%" }}>
-                  <div className="w-full bg-tertiary opacity-40 rounded-t-md group-hover:opacity-60 transition-opacity"></div>
-                  <span className="absolute -bottom-6 font-label-caps text-label-caps text-secondary">Sun</span>
-                </div>
-              </div>
-            </div>
+            <TabsContent value="student-attendance" className="space-y-8">
 
-            {/* Summary Cards */}
-            <div className="flex flex-col gap-6">
-              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-ambient border border-slate-100 flex-1 flex flex-col justify-center">
-                <p className="font-label-caps text-label-caps text-secondary mb-2">Average Attendance Rate</p>
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-h1 text-h1 text-on-surface">87%</h2>
-                  <span className="font-body-sm text-body-sm text-primary flex items-center">
-                    <span className="material-symbols-outlined text-[16px]">trending_up</span> 2.4%
-                  </span>
-                </div>
-              </div>
-              
-              <div className="bg-surface-container-lowest rounded-xl p-6 shadow-ambient border border-slate-100 flex-1 flex flex-col justify-center">
-                <p className="font-label-caps text-label-caps text-secondary mb-2">Total Absences (This Month)</p>
-                <div className="flex items-baseline gap-2">
-                  <h2 className="font-h1 text-h1 text-on-surface">142</h2>
-                  <span className="font-body-sm text-body-sm text-error flex items-center">
-                    <span className="material-symbols-outlined text-[16px]">trending_up</span> 5.1%
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+              {/* Bento Grid Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Chart Card */}
+                <Card className="lg:col-span-2">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
+                    <CardTitle>Daily Attendance Trends</CardTitle>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 flex items-end gap-2 sm:gap-4 pt-8">
+                      {/* Mock Bar Chart */}
+                      <div className="flex-1 bg-muted rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "60%" }}>
+                        <div className="w-full bg-primary/60 rounded-t-md group-hover:bg-primary/80 transition-colors"></div>
+                        <span className="absolute -bottom-6 text-xs text-muted-foreground">Mon</span>
+                      </div>
+                      <div className="flex-1 bg-muted rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "75%" }}>
+                        <div className="w-full bg-primary/60 rounded-t-md group-hover:bg-primary/80 transition-colors"></div>
+                        <span className="absolute -bottom-6 text-xs text-muted-foreground">Tue</span>
+                      </div>
+                      <div className="flex-1 bg-muted rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "85%" }}>
+                        <div className="w-full bg-primary rounded-t-md"></div>
+                        <span className="absolute -bottom-6 text-xs font-medium">Wed</span>
+                      </div>
+                      <div className="flex-1 bg-muted rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "65%" }}>
+                        <div className="w-full bg-primary/60 rounded-t-md group-hover:bg-primary/80 transition-colors"></div>
+                        <span className="absolute -bottom-6 text-xs text-muted-foreground">Thu</span>
+                      </div>
+                      <div className="flex-1 bg-muted rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "90%" }}>
+                        <div className="w-full bg-primary/60 rounded-t-md group-hover:bg-primary/80 transition-colors"></div>
+                        <span className="absolute -bottom-6 text-xs text-muted-foreground">Fri</span>
+                      </div>
+                      <div className="flex-1 bg-muted rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "40%" }}>
+                        <div className="w-full bg-yellow-400/40 rounded-t-md group-hover:bg-yellow-400/60 transition-colors"></div>
+                        <span className="absolute -bottom-6 text-xs text-muted-foreground">Sat</span>
+                      </div>
+                      <div className="flex-1 bg-muted rounded-t-md flex items-end justify-center group relative cursor-pointer" style={{ height: "30%" }}>
+                        <div className="w-full bg-yellow-400/40 rounded-t-md group-hover:bg-yellow-400/60 transition-colors"></div>
+                        <span className="absolute -bottom-6 text-xs text-muted-foreground">Sun</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-          {/* Data Table */}
-          <div className="bg-surface-container-lowest rounded-xl shadow-ambient border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-surface-bright">
-              <h3 className="font-h3 text-h3 text-on-surface">Class Attendance Summary</h3>
-              <button className="flex items-center gap-1 px-4 py-2 border border-primary text-primary font-button text-button rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-colors">
-                <span className="material-symbols-outlined text-[18px]">download</span>
-                Export
-              </button>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 font-label-caps text-label-caps text-secondary border-b border-slate-100">
-                    <th className="py-4 px-6 font-semibold">Class Name</th>
-                    <th className="py-4 px-6 font-semibold">Ustaz</th>
-                    <th className="py-4 px-6 font-semibold">Total Students</th>
-                    <th className="py-4 px-6 font-semibold">Attendance Rate</th>
-                    <th className="py-4 px-6 font-semibold">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="font-body-sm text-body-sm text-on-surface">
-                  <tr className="border-b border-slate-100 hover:bg-surface-bright transition-colors">
-                    <td className="py-4 px-6 font-medium">Tajweed Fundamentals</td>
-                    <td className="py-4 px-6">Ust. Ahmad Ali</td>
-                    <td className="py-4 px-6">24</td>
-                    <td className="py-4 px-6">92%</td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary-fixed-dim/20 text-primary-container font-label-caps text-[10px]">
-                        Excellent
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-100 hover:bg-surface-bright transition-colors">
-                    <td className="py-4 px-6 font-medium">Fiqh for Beginners</td>
-                    <td className="py-4 px-6">Ust. Zainab Noor</td>
-                    <td className="py-4 px-6">18</td>
-                    <td className="py-4 px-6">85%</td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-secondary-fixed-dim/30 text-secondary font-label-caps text-[10px]">
-                        Good
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-100 hover:bg-surface-bright transition-colors">
-                    <td className="py-4 px-6 font-medium">Advanced Seerah</td>
-                    <td className="py-4 px-6">Ust. Omar Farooq</td>
-                    <td className="py-4 px-6">30</td>
-                    <td className="py-4 px-6">78%</td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-error-container text-on-error-container font-label-caps text-[10px]">
-                        Needs Attention
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+                {/* Summary Cards */}
+                <div className="flex flex-col gap-6">
+                  <Card>
+                    <CardContent className="flex flex-col justify-center p-6">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Average Attendance Rate</p>
+                      <div className="flex items-baseline gap-2">
+                        <h2 className="text-3xl font-bold">87%</h2>
+                        <span className="text-sm text-green-600 flex items-center">
+                          <TrendingUp className="h-4 w-4 mr-1" /> 2.4%
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardContent className="flex flex-col justify-center p-6">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Total Absences (This Month)</p>
+                      <div className="flex items-baseline gap-2">
+                        <h2 className="text-3xl font-bold">142</h2>
+                        <span className="text-sm text-red-600 flex items-center">
+                          <TrendingUp className="h-4 w-4 mr-1" /> 5.1%
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Data Table */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle>Class Attendance Summary</CardTitle>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Class Name</TableHead>
+                        <TableHead>Ustaz</TableHead>
+                        <TableHead>Total Students</TableHead>
+                        <TableHead>Attendance Rate</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow className="hover:bg-muted/50">
+                        <TableCell className="font-medium">Tajweed Fundamentals</TableCell>
+                        <TableCell>Ust. Ahmad Ali</TableCell>
+                        <TableCell>24</TableCell>
+                        <TableCell>92%</TableCell>
+                        <TableCell>
+                          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+                            Excellent
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="hover:bg-muted/50">
+                        <TableCell className="font-medium">Fiqh for Beginners</TableCell>
+                        <TableCell>Ust. Zainab Noor</TableCell>
+                        <TableCell>18</TableCell>
+                        <TableCell>85%</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            Good
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                      <TableRow className="hover:bg-muted/50">
+                        <TableCell className="font-medium">Advanced Seerah</TableCell>
+                        <TableCell>Ust. Omar Farooq</TableCell>
+                        <TableCell>30</TableCell>
+                        <TableCell>78%</TableCell>
+                        <TableCell>
+                          <Badge variant="destructive">
+                            Needs Attention
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
         </main>
       </div>
