@@ -7,12 +7,12 @@ export interface AttendanceModel {
   id: string;
   student_id: string;
   class_id: string;
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD (Gregorian for database compatibility)
+  ethiopian_date: string; // Ethiopian date in YYYY-MM-DD format
+  ethiopian_day: number; // Ethiopian day (1-30)
+  ethiopian_month: number; // Ethiopian month (1-13)
+  ethiopian_year: number; // Ethiopian year
   status: AttendanceStatus;
   recorded_by: string | null; // ustaz_id
   created_at: string;
-  ethiopian_date: string | null;
-  ethiopian_day: string | null;
-  ethiopian_month: string | null;
-  ethiopian_year: string | null;
 }

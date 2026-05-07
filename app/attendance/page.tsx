@@ -12,19 +12,27 @@ import { Calendar, Users, CheckCircle, X, Clock, RefreshCw } from "lucide-react"
 import { useData } from "@/context/dataContext";
 import { attendanceService } from "@/lib/servies/attendanceService";
 import { AttendanceModel } from "@/models/Attendance";
+import { EthiopianDatePicker } from "@/components/ui/ethiopian-date-picker";
+import { EthiopianDateComponents, formatEthiopianDate } from "@/lib/utils/ethiopian-date";
 
 export default function AttendancePage() {
   const { students, classes, loading, error } = useData();
   const [attendance, setAttendance] = useState<AttendanceModel[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedEthiopianDate, setSelectedEthiopianDate] = useState<string>('');
+  const [selectedEthiopianComponents, setSelectedEthiopianComponents] = useState<EthiopianDateComponents | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [attendanceLoading, setAttendanceLoading] = useState<boolean>(false);
 
   const fetchAttendance = async () => {
+    if (!selectedEthiopianComponents) return;
+    
     try {
       setAttendanceLoading(true);
+      // Convert Ethiopian date to Gregorian for API compatibility
+      const gregorianDate = selectedEthiopianComponents.ethiopian_date;
+      
       const data = await attendanceService.getByDate(
-        selectedDate,
+        gregorianDate,
         selectedClass === 'all' ? undefined : selectedClass
       );
       setAttendance(data);
@@ -36,8 +44,17 @@ export default function AttendancePage() {
   };
 
   useEffect(() => {
+    // Set initial Ethiopian date on mount
+    import('@/lib/utils/ethiopian-date').then(({ getCurrentEthiopianDate }) => {
+      const currentEthiopian = getCurrentEthiopianDate();
+      setSelectedEthiopianDate(currentEthiopian.ethiopian_date);
+      setSelectedEthiopianComponents(currentEthiopian);
+    });
+  }, []);
+
+  useEffect(() => {
     fetchAttendance();
-  }, [selectedDate, selectedClass]);
+  }, [selectedEthiopianComponents, selectedClass]);
 
   const getStudentName = (studentId: string) => {
     const student = students.find(s => s.id === studentId);
@@ -124,21 +141,20 @@ export default function AttendancePage() {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-              {/* Date Picker */}
+              {/* Ethiopian Date Picker */}
               <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
-                <label className="text-sm font-medium text-muted-foreground" htmlFor="attendance-date">
-                  Date
+                <label className="text-sm font-medium text-muted-foreground" htmlFor="ethiopian-date">
+                  Ethiopian Date
                 </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    className="pl-10"
-                    id="attendance-date"
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                  />
-                </div>
+                <EthiopianDatePicker
+                  id="ethiopian-date"
+                  value={selectedEthiopianDate}
+                  onChange={(date, components) => {
+                    setSelectedEthiopianDate(date);
+                    setSelectedEthiopianComponents(components);
+                  }}
+                  placeholder="Select Ethiopian date"
+                />
               </div>
               
               {/* Class Selector */}
@@ -204,10 +220,11 @@ export default function AttendancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[35%]">Student Name</TableHead>
+                      <TableHead className="w-[30%]">Student Name</TableHead>
                       <TableHead className="w-[20%]">Class</TableHead>
+                      <TableHead className="w-[15%]">Ethiopian Date</TableHead>
                       <TableHead className="w-[15%]">Time</TableHead>
-                      <TableHead className="text-right w-[15%]">Status</TableHead>
+                      <TableHead className="text-right w-[20%]">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -222,6 +239,14 @@ export default function AttendancePage() {
                         hour12: true 
                       });
                       
+                      // Format Ethiopian date for display
+                      const ethiopianDateDisplay = formatEthiopianDate({
+                        ethiopian_day: record.ethiopian_day,
+                        ethiopian_month: record.ethiopian_month,
+                        ethiopian_year: record.ethiopian_year,
+                        ethiopian_date: record.ethiopian_date
+                      });
+                      
                       return (
                         <TableRow key={record.id} className="hover:bg-muted/50">
                           <TableCell>
@@ -233,6 +258,7 @@ export default function AttendancePage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{className}</TableCell>
+                          <TableCell className="text-muted-foreground">{ethiopianDateDisplay}</TableCell>
                           <TableCell className="text-muted-foreground">{time}</TableCell>
                           <TableCell className="text-right">
                             {getStatusBadge(record.status)}

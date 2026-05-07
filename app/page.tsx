@@ -62,7 +62,7 @@ export default function LoginPage() {
                 school
               </span>
             </div>
-            <h1 className="font-h2 text-h2 text-on-surface mb-2">Al-Ilm Admin</h1>
+            <h1 className="font-h2 text-h2 text-on-surface mb-2">Admin Login</h1>
             <p className="font-body-sm text-body-sm text-on-surface-variant">
               Islamic Excellence Portal
             </p>
