@@ -24,7 +24,7 @@ export default function ReportsPage() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
             <div>
               <h2 className="font-h2 text-h2 text-on-surface">Reports and Analytics</h2>
-              <p className="font-body-md text-body-md text-secondary mt-1">
+              <p className="font-body-md text-body-md  mt-1">
                 View comprehensive attendance data and trends.
               </p>
             </div>

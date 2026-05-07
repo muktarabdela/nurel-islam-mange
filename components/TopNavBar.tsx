@@ -1,6 +1,28 @@
+"use client";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function TopNavBar() {
+  const router = useRouter();
+  const [adminName, setAdminName] = useState("Admin");
+
+  useEffect(() => {
+    // Get admin data from sessionStorage
+    const adminData = sessionStorage.getItem('admin');
+    if (adminData) {
+      const admin = JSON.parse(adminData);
+      setAdminName(admin.full_name || "Admin");
+    }
+  }, []);
+
+  const handleLogout = () => {
+    // Clear admin data from sessionStorage
+    sessionStorage.removeItem('admin');
+    // Redirect to login page
+    router.push('/login');
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-surface-container-highest bg-surface-container-lowest/80 backdrop-blur-md text-primary font-body-sm flex justify-between items-center h-16 px-8">
       
@@ -32,8 +54,15 @@ export default function TopNavBar() {
         
         <div className="flex items-center gap-3 border-l border-surface-container-highest pl-6 ml-2">
           <span className="text-on-surface-variant font-medium hidden sm:block">
-            Admin
+            {adminName}
           </span>
+          <button
+            onClick={handleLogout}
+            className="text-on-surface-variant hover:text-error transition-all focus:ring-2 focus:ring-error/20 rounded-full p-1"
+            title="Logout"
+          >
+            <span className="material-symbols-outlined">logout</span>
+          </button>
           <img
             alt="Admin User Avatar"
             className="w-8 h-8 rounded-full border border-outline-variant object-cover"

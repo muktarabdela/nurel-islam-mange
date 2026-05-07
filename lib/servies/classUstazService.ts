@@ -4,6 +4,15 @@ import { ClassUstazModel } from '@/models/ClassUstaz';
 const TABLE_NAME = 'class_ustaz';
 
 export const classUstazService = {
+  async getAll() {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select('*, ustaz:ustaz(*), classes:classes(*)');
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
   async assign(class_id: string, ustaz_id: string): Promise<ClassUstazModel> {
     const { data, error } = await supabase
       .from(TABLE_NAME)

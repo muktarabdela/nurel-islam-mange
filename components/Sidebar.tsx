@@ -53,7 +53,7 @@ export default function Sidebar() {
                       asChild
                       variant={isActive ? "secondary" : "ghost"}
                       className={`w-full justify-start gap-3 h-12 ${
-                        isActive ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground"
+                        isActive ? "bg-secondary -foreground" : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       <Link href={item.path} className="flex items-center gap-3 w-full">

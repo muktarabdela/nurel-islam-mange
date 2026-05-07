@@ -155,7 +155,7 @@ export default function ClassUstazModal({ isOpen, onClose, class: classItem, onS
               {assignedUstaz.map((assignment) => (
                 <div key={assignment.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-xs font-bold text-secondary">
+                    <div className="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-xs font-bold ">
                       {assignment.ustaz.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                     </div>
                     <div>

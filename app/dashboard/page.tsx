@@ -1,4 +1,6 @@
 "use client"
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
 import { Button } from "@/components/ui/button";
@@ -8,8 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Users, UserCheck, Clock, Calendar, TrendingUp, ArrowRight, Plus, CheckSquare, School, BookOpen, Users2, Building } from "lucide-react";
 import { useData } from "@/context/dataContext";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function StudentsPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    if (!isAuthenticated()) {
+      router.push('/login');
+    }
+  }, [router]);
   const { students, attendance, ustaz, classes, loading, error, refreshData } = useData();
 
   // Calculate statistics
@@ -111,19 +122,9 @@ export default function StudentsPage() {
               <h2 className="font-h2 text-h2 text-on-background mb-1">
                 Dashboard Overview
               </h2>
-              <p className="font-body-sm text-body-sm text-secondary">
+              <p className="font-body-sm text-body-sm">
                 Assalamu alaikum, here is the summary for today.
               </p>
-            </div>
-            <div className="flex gap-4">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Student
-              </Button>
-              <Button className="flex items-center gap-2">
-                <CheckSquare className="h-4 w-4" />
-                Take Attendance
-              </Button>
             </div>
           </div>
 

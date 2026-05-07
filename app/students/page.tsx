@@ -6,7 +6,8 @@ import StudentModal from "@/components/StudentModal";
 import { useData } from "@/context/dataContext";
 import { StudentModel } from "@/models/Student";
 import { studentService } from "@/lib/servies/studentService";
-import { useState } from "react";
+import { classUstazService } from "@/lib/servies/classUstazService";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,19 +15,50 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Users, UserPlus, Filter, Search, Edit, Trash2, ChevronLeft, ChevronRight, Users2, GraduationCap, UserX, MoreHorizontal } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function StudentsPage() {
-  const { students: studentsData, loading, error, refreshData } = useData();
+  const { students: studentsData, classes, ustaz, loading, error, refreshData } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentModel | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedUstaz, setSelectedUstaz] = useState('all');
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [classUstazAssignments, setClassUstazAssignments] = useState<any[]>([]);
 
-  const filteredStudents = studentsData.filter(student => 
-    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.parent_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.class_id?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch class-ustaz assignments
+  useEffect(() => {
+    const fetchClassUstazAssignments = async () => {
+      try {
+        const assignments = await classUstazService.getAll();
+        setClassUstazAssignments(assignments);
+      } catch (err) {
+        console.error('Error fetching class-ustaz assignments:', err);
+      }
+    };
+    fetchClassUstazAssignments();
+  }, []);
+
+  const filteredStudents = studentsData.filter(student => {
+    const matchesSearch = 
+      student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.parent_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.class_id?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesClass = selectedClass === 'all' || student.class_id === selectedClass;
+    
+    // For ustaz filter, check if the student's class has the selected ustaz assigned
+    let matchesUstaz = selectedUstaz === 'all';
+    if (selectedUstaz !== 'all' && student.class_id) {
+      const classAssignment = classUstazAssignments.find(
+        assignment => assignment.class_id === student.class_id && assignment.ustaz_id === selectedUstaz
+      );
+      matchesUstaz = !!classAssignment;
+    }
+    
+    return matchesSearch && matchesClass && matchesUstaz;
+  });
 
   const activeStudentsCount = studentsData.filter(s => s.is_active).length;
   const inactiveStudentsCount = studentsData.filter(s => !s.is_active).length;
@@ -63,6 +95,12 @@ export default function StudentsPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const getClassName = (classId: string | null) => {
+    if (!classId) return 'Unassigned';
+    const classItem = classes.find(c => c.id === classId);
+    return classItem ? classItem.name : 'Unknown Class';
+  };
+
   return (
     <>
       <div className="flex bg-background min-h-screen font-body-md antialiased text-on-background">
@@ -85,15 +123,55 @@ export default function StudentsPage() {
                     Manage enrollments, assign classes, and monitor student status.
                   </p>
                 </div>
-                <div className="flex gap-4">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    Filter
-                  </Button>
-                  <Button onClick={handleAddStudent} className="flex items-center gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    Add Student
-                  </Button>
+                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                  {/* Class Selector */}
+                  <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
+                    <label className="text-sm font-medium text-muted-foreground" htmlFor="class-select">
+                      Class
+                    </label>
+                    <Select value={selectedClass} onValueChange={setSelectedClass}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Classes</SelectItem>
+                        {classes.map((classItem) => (
+                          <SelectItem key={classItem.id} value={classItem.id}>
+                            {classItem.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Ustaz Selector */}
+                  <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
+                    <label className="text-sm font-medium text-muted-foreground" htmlFor="ustaz-select">
+                      Ustaz
+                    </label>
+                    <Select value={selectedUstaz} onValueChange={setSelectedUstaz}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an ustaz" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Ustaz</SelectItem>
+                        {ustaz.map((ustazItem) => (
+                          <SelectItem key={ustazItem.id} value={ustazItem.id}>
+                            {ustazItem.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Add Student Button */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium text-muted-foreground invisible">Add</label>
+                    <Button onClick={handleAddStudent} className="flex items-center gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      Add Student
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -216,7 +294,7 @@ export default function StudentsPage() {
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary">
-                                {student.class_id || 'Unassigned'}
+                                {getClassName(student.class_id)}
                               </Badge>
                             </TableCell>
                             <TableCell>

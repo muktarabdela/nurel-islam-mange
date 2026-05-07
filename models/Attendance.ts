@@ -11,4 +11,8 @@ export interface AttendanceModel {
   status: AttendanceStatus;
   recorded_by: string | null; // ustaz_id
   created_at: string;
+  ethiopian_date: string | null;
+  ethiopian_day: string | null;
+  ethiopian_month: string | null;
+  ethiopian_year: string | null;
 }
