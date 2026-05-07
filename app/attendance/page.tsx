@@ -8,12 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Users, CheckCircle, X, Clock, RefreshCw } from "lucide-react";
+import { Calendar, Users, CheckCircle, X, Clock, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useData } from "@/context/dataContext";
 import { attendanceService } from "@/lib/servies/attendanceService";
 import { AttendanceModel } from "@/models/Attendance";
 import { EthiopianDatePicker } from "@/components/ui/ethiopian-date-picker";
-import { EthiopianDateComponents, formatEthiopianDate } from "@/lib/utils/ethiopian-date";
+import { EthiopianDateComponents, ethiopianToGregorian, formatEthiopianDate } from "@/lib/utils/ethiopian-date";
 
 export default function AttendancePage() {
   const { students, classes, loading, error } = useData();
@@ -22,26 +22,41 @@ export default function AttendancePage() {
   const [selectedEthiopianComponents, setSelectedEthiopianComponents] = useState<EthiopianDateComponents | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [attendanceLoading, setAttendanceLoading] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 10;
 
-  const fetchAttendance = async () => {
-    if (!selectedEthiopianComponents) return;
+const fetchAttendance = async () => {
+  if (!selectedEthiopianComponents) return;
+  
+  try {
+    setAttendanceLoading(true);
+
+    // 1. Convert the Ethiopian components to a JavaScript Date (Gregorian)
+    const gDate = ethiopianToGregorian(
+      selectedEthiopianComponents.ethiopian_year,
+      selectedEthiopianComponents.ethiopian_month,
+      selectedEthiopianComponents.ethiopian_day
+    );
+
+    // 2. Format the Gregorian date to YYYY-MM-DD string for the API
+    const year = gDate.getFullYear();
+    const month = String(gDate.getMonth() + 1).padStart(2, '0');
+    const day = String(gDate.getDate()).padStart(2, '0');
+    const gregorianDateString = `${year}-${month}-${day}`;
     
-    try {
-      setAttendanceLoading(true);
-      // Convert Ethiopian date to Gregorian for API compatibility
-      const gregorianDate = selectedEthiopianComponents.ethiopian_date;
-      
-      const data = await attendanceService.getByDate(
-        gregorianDate,
-        selectedClass === 'all' ? undefined : selectedClass
-      );
-      setAttendance(data);
-    } catch (err) {
-      console.error('Error fetching attendance:', err);
-    } finally {
-      setAttendanceLoading(false);
-    }
-  };
+    // 3. Pass the actual Gregorian string to the service
+    const data = await attendanceService.getByDate(
+      gregorianDateString,
+      selectedClass === 'all' ? undefined : selectedClass
+    );
+    
+    setAttendance(data);
+  } catch (err) {
+    console.error('Error fetching attendance:', err);
+  } finally {
+    setAttendanceLoading(false);
+  }
+};
 
   useEffect(() => {
     // Set initial Ethiopian date on mount
@@ -55,6 +70,10 @@ export default function AttendancePage() {
   useEffect(() => {
     fetchAttendance();
   }, [selectedEthiopianComponents, selectedClass]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [attendance]);
 
   const getStudentName = (studentId: string) => {
     const student = students.find(s => s.id === studentId);
@@ -86,6 +105,19 @@ export default function AttendancePage() {
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const totalPages = Math.ceil(attendance.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAttendance = attendance.slice(startIndex, endIndex);
+
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
   };
   if (loading) {
     return (
@@ -216,7 +248,7 @@ export default function AttendancePage() {
                 <div className="flex items-center justify-center py-12">
                   <div className="text-muted-foreground">Loading attendance records...</div>
                 </div>
-              ) : attendance.length > 0 ? (
+              ) : paginatedAttendance.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -228,11 +260,11 @@ export default function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {attendance.map((record) => {
+                    {paginatedAttendance.map((record, index) => {
                       const studentName = getStudentName(record.student_id);
                       const studentId = getStudentId(record.student_id);
                       const className = getClassName(record.class_id);
-                      const initials = getInitials(studentName);
+                      const orderNumber = startIndex + index + 1;
                       const time = new Date(record.created_at).toLocaleTimeString('en-US', { 
                         hour: '2-digit', 
                         minute: '2-digit',
@@ -252,7 +284,7 @@ export default function AttendancePage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                                {initials}
+                                {orderNumber}
                               </div>
                               <span className="font-medium">{studentName}</span>
                             </div>
@@ -280,6 +312,40 @@ export default function AttendancePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Pagination Controls */}
+          {attendance.length > itemsPerPage && (
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {startIndex + 1} to {Math.min(endIndex, attendance.length)} of {attendance.length} records
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground px-3">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-2"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
 
 
         </main>
