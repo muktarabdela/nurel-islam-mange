@@ -272,7 +272,7 @@ export default function StudentsPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredStudents.map((student) => (
+                        filteredStudents.map((student, index) => (
                           <TableRow key={student.id} className="group">
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -281,11 +281,10 @@ export default function StudentsPage() {
                                     ? 'bg-primary/10 text-primary' 
                                     : 'bg-muted text-muted-foreground'
                                 }`}>
-                                  {getInitials(student.full_name)}
+                                  {index + 1}
                                 </div>
                                 <div>
                                   <div className="font-medium">{student.full_name}</div>
-                                  <div className="text-sm text-muted-foreground">ID: {student.id}</div>
                                 </div>
                               </div>
                             </TableCell>

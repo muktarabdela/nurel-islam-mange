@@ -157,7 +157,7 @@ export default function UstazModal({ isOpen, onClose, ustaz, onSuccess }: UstazM
                 value={formData.phone_number}
                 onChange={handleChange}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="+60 12-345 6789"
+                placeholder="09xxxxxxxxx"
               />
             </div>
 
@@ -175,20 +175,6 @@ export default function UstazModal({ isOpen, onClose, ustaz, onSuccess }: UstazM
               />
               <label htmlFor="is_active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Active
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                name="must_change_password"
-                id="must_change_password"
-                checked={formData.must_change_password}
-                onChange={handleChange}
-                className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-              />
-              <label htmlFor="must_change_password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Must change password on first login
               </label>
             </div>
 
