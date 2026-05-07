@@ -143,14 +143,6 @@ export default function ClassesPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-4">
-              <Button variant="outline" className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                Assign Students
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" />
-                Assign Ustaz
-              </Button>
               <Button onClick={handleAddClass} className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Add Class

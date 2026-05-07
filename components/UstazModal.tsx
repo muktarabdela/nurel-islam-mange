@@ -109,7 +109,7 @@ export default function UstazModal({ isOpen, onClose, ustaz, onSuccess }: UstazM
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+<DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Ustaz' : 'Add New Ustaz'}</DialogTitle>
           <DialogDescription>

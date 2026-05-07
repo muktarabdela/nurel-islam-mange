@@ -157,22 +157,6 @@ export default function UstazPage() {
                     </p>
                   </CardContent>
                 </Card>
-
-                {/* Card 3 - Leave Requests */}
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Leave Requests
-                    </CardTitle>
-                    <Calendar className="h-4 w-4 text-red-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{inactiveUstazCount}</div>
-                    <p className="text-xs text-red-600 mt-2">
-                      Not active
-                    </p>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Main Data Table */}
@@ -335,12 +319,14 @@ export default function UstazPage() {
       </div>
 
       {/* Ustaz Modal */}
+      
       <UstazModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         ustaz={selectedUstaz}
         onSuccess={handleModalSuccess}
       />
-    </>
+      
+      </>
   );
 }

@@ -90,7 +90,7 @@ export default function ClassModal({ isOpen, onClose, class: classItem, onSucces
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+<DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Class' : 'Add New Class'}</DialogTitle>
           <DialogDescription>

@@ -106,7 +106,7 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+<DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Student' : 'Add New Student'}</DialogTitle>
           <DialogDescription>
