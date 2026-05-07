@@ -26,6 +26,8 @@ export default function StudentsPage() {
   const [selectedUstaz, setSelectedUstaz] = useState('all');
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [classUstazAssignments, setClassUstazAssignments] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Fetch class-ustaz assignments
   useEffect(() => {
@@ -39,6 +41,11 @@ export default function StudentsPage() {
     };
     fetchClassUstazAssignments();
   }, []);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedClass, selectedUstaz]);
 
   const filteredStudents = studentsData.filter(student => {
     const matchesSearch = 
@@ -59,6 +66,12 @@ export default function StudentsPage() {
     
     return matchesSearch && matchesClass && matchesUstaz;
   });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
 
   const activeStudentsCount = studentsData.filter(s => s.is_active).length;
   const inactiveStudentsCount = studentsData.filter(s => !s.is_active).length;
@@ -265,14 +278,14 @@ export default function StudentsPage() {
                             Error: {error}
                           </TableCell>
                         </TableRow>
-                      ) : filteredStudents.length === 0 ? (
+                      ) : paginatedStudents.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center text-muted-foreground">
                             {searchTerm ? 'No students found matching your search.' : 'No students found.'}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredStudents.map((student, index) => (
+                        paginatedStudents.map((student, index) => (
                           <TableRow key={student.id} className="group">
                             <TableCell>
                               <div className="flex items-center gap-3">
@@ -281,7 +294,7 @@ export default function StudentsPage() {
                                     ? 'bg-primary/10 text-primary' 
                                     : 'bg-muted text-muted-foreground'
                                 }`}>
-                                  {index + 1}
+                                  {startIndex + index + 1}
                                 </div>
                                 <div>
                                   <div className="font-medium">{student.full_name}</div>
@@ -356,13 +369,28 @@ export default function StudentsPage() {
                   {/* Pagination */}
                   <div className="flex items-center justify-between px-2 py-4">
                     <div className="text-sm text-muted-foreground">
-                      Showing {filteredStudents.length} of {studentsData.length} entries
+                      Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} entries
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" disabled>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
                         <ChevronLeft className="h-4 w-4" />
+                        Previous
                       </Button>
-                      <Button variant="outline" size="sm" disabled>
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages || totalPages === 0}
+                      >
+                        Next
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
