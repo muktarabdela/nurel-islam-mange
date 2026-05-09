@@ -15,27 +15,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Edit, CheckCircle, Circle, Calendar, Filter, Search } from "lucide-react";
 import { isAuthenticated } from "@/lib/auth";
+import { useData } from "@/context/dataContext";
+import { TodoModel } from "@/models/Todo";
+import { todoService } from "@/lib/servies/todoService";
 
-interface Todo {
-  id: string;
-  title: string;
-  description: string;
-  completed: boolean;
-  createdAt: string;
-}
 
 export default function TodosPage() {
   const router = useRouter();
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { todos, loading, refreshData } = useData();
+  const [localTodos, setLocalTodos] = useState<TodoModel[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [editingTodo, setEditingTodo] = useState<TodoModel | null>(null);
   const [newTodo, setNewTodo] = useState({
     title: "",
     description: ""
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
   useEffect(() => {
@@ -44,73 +41,91 @@ export default function TodosPage() {
       return;
     }
     
-    // Load todos from localStorage
-    const storedTodos = localStorage.getItem('todos');
-    if (storedTodos) {
-      setTodos(JSON.parse(storedTodos));
+    setLocalTodos(todos);
+  }, [todos, router]);
+
+  const addTodo = async () => {
+    if (!newTodo.title.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const createdTodo = await todoService.create({
+        title: newTodo.title,
+        description: newTodo.description,
+        completed: false
+      });
+      
+      setLocalTodos([createdTodo, ...localTodos]);
+      setNewTodo({
+        title: "",
+        description: ""
+      });
+      setIsAddDialogOpen(false);
+      await refreshData();
+    } catch (error) {
+      console.error('Error adding todo:', error);
+      // You could show a toast notification here
+    } finally {
+      setIsSubmitting(false);
     }
-    setLoading(false);
-  }, [router]);
+  };
 
-  // Save todos to localStorage whenever they change
-  useEffect(() => {
-    if (todos.length > 0 || localStorage.getItem('todos')) {
-      localStorage.setItem('todos', JSON.stringify(todos));
+  const updateTodo = async () => {
+    if (!editingTodo || !newTodo.title.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const updatedTodo = await todoService.update(editingTodo.id, {
+        title: newTodo.title,
+        description: newTodo.description
+      });
+      
+      const updatedTodos = localTodos.map(todo =>
+        todo.id === editingTodo.id ? updatedTodo : todo
+      );
+      
+      setLocalTodos(updatedTodos);
+      setIsEditDialogOpen(false);
+      setEditingTodo(null);
+      setNewTodo({
+        title: "",
+        description: ""
+      });
+      await refreshData();
+    } catch (error) {
+      console.error('Error updating todo:', error);
+      // You could show a toast notification here
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [todos]);
-
-  const addTodo = () => {
-    if (!newTodo.title.trim()) return;
-
-    const todo: Todo = {
-      id: Date.now().toString(),
-      title: newTodo.title,
-      description: newTodo.description,
-      completed: false,
-      createdAt: new Date().toISOString()
-    };
-
-    setTodos([todo, ...todos]);
-    setNewTodo({
-      title: "",
-      description: ""
-    });
-    setIsAddDialogOpen(false);
   };
 
-  const updateTodo = () => {
-    if (!editingTodo || !newTodo.title.trim()) return;
-
-    const updatedTodos = todos.map(todo =>
-      todo.id === editingTodo.id
-        ? {
-            ...todo,
-            title: newTodo.title,
-            description: newTodo.description
-          }
-        : todo
-    );
-
-    setTodos(updatedTodos);
-    setIsEditDialogOpen(false);
-    setEditingTodo(null);
-    setNewTodo({
-      title: "",
-      description: ""
-    });
+  const deleteTodo = async (id: string) => {
+    try {
+      await todoService.delete(id);
+      setLocalTodos(localTodos.filter(todo => todo.id !== id));
+      await refreshData();
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+      // You could show a toast notification here
+    }
   };
 
-  const deleteTodo = (id: string) => {
-    setTodos(todos.filter(todo => todo.id !== id));
+  const toggleTodo = async (id: string) => {
+    try {
+      const updatedTodo = await todoService.toggleComplete(id);
+      const updatedTodos = localTodos.map(todo =>
+        todo.id === id ? updatedTodo : todo
+      );
+      setLocalTodos(updatedTodos);
+      await refreshData();
+    } catch (error) {
+      console.error('Error toggling todo:', error);
+      // You could show a toast notification here
+    }
   };
 
-  const toggleTodo = (id: string) => {
-    setTodos(todos.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
-  };
-
-  const startEdit = (todo: Todo) => {
+  const startEdit = (todo: TodoModel) => {
     setEditingTodo(todo);
     setNewTodo({
       title: todo.title,
@@ -120,14 +135,14 @@ export default function TodosPage() {
   };
 
 
-  const filteredTodos = todos.filter(todo => {
+  const filteredTodos = localTodos.filter(todo => {
     const matchesSearch = todo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          todo.description.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
-  const completedCount = todos.filter(todo => todo.completed).length;
-  const totalCount = todos.length;
+  const completedCount = localTodos.filter(todo => todo.completed).length;
+  const totalCount = localTodos.length;
   const completionRate = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   if (loading) {
@@ -200,14 +215,16 @@ export default function TodosPage() {
                   <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={addTodo}>Add Todo</Button>
+                  <Button onClick={addTodo} disabled={isSubmitting}>
+                    {isSubmitting ? 'Adding...' : 'Add Todo'}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -252,7 +269,7 @@ export default function TodosPage() {
                 <div className="text-2xl font-bold">{completionRate.toFixed(0)}%</div>
               </CardContent>
             </Card>
-          </div>
+          </div> */}
 
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -302,7 +319,7 @@ export default function TodosPage() {
                           </p>
                         )}
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>Created: {new Date(todo.createdAt).toLocaleDateString()}</span>
+                          <span>Created: {new Date(todo.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -379,7 +396,9 @@ export default function TodosPage() {
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={updateTodo}>Update Todo</Button>
+                <Button onClick={updateTodo} disabled={isSubmitting}>
+                  {isSubmitting ? 'Updating...' : 'Update Todo'}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
