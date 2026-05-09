@@ -20,6 +20,8 @@ const manrope = Manrope({
 export const metadata = {
   title: "nurel islam student management",
   description: "Islamic Excellence Admin Portal",
+  manifest: '/manifest.json',
+  themeColor: '#166534',
 };
 
 export default function RootLayout({
