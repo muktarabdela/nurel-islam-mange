@@ -28,30 +28,14 @@ export default function TopNavBar() {
       
       {/* Left side: Search */}
       <div className="flex items-center gap-4 w-1/3">
-        <div className="relative w-full max-w-md hidden md:block">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
-            search
-          </span>
-          <input
-            className="w-full pl-10 pr-4 py-2 bg-surface border border-outline-variant rounded-full focus:ring-2 focus:ring-primary/20 text-on-surface font-body-sm transition-all outline-none"
-            placeholder="Search..."
-            type="text"
-          />
-        </div>
+       
       </div>
 
       <div className="hidden">Admin Portal</div>
 
       {/* Right side: Actions & Profile */}
-      <div className="flex items-center gap-6">
-        <button className="text-on-surface-variant hover:text-primary transition-all focus:ring-2 focus:ring-primary/20 rounded-full p-1 relative">
-          <span className="material-symbols-outlined">notifications</span>
-          <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
-        </button>
-        <button className="text-on-surface-variant hover:text-primary transition-all focus:ring-2 focus:ring-primary/20 rounded-full p-1">
-          <span className="material-symbols-outlined">settings</span>
-        </button>
-        
+      <div className="flex items-center gap-6">       
+      
         <div className="flex items-center gap-3 border-l border-surface-container-highest pl-6 ml-2">
           <span className="text-on-surface-variant font-medium hidden sm:block">
             {adminName}

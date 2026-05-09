@@ -21,10 +21,7 @@ interface Todo {
   title: string;
   description: string;
   completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  category: string;
   createdAt: string;
-  dueDate?: string;
 }
 
 export default function TodosPage() {
@@ -32,21 +29,14 @@ export default function TodosPage() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterPriority, setFilterPriority] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [newTodo, setNewTodo] = useState({
     title: "",
-    description: "",
-    priority: "medium" as 'low' | 'medium' | 'high',
-    category: "general",
-    dueDate: ""
+    description: ""
   });
 
-  const categories = ["general", "work", "personal", "urgent", "study", "health"];
-  const priorities = ['low', 'medium', 'high'] as const;
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -77,19 +67,13 @@ export default function TodosPage() {
       title: newTodo.title,
       description: newTodo.description,
       completed: false,
-      priority: newTodo.priority,
-      category: newTodo.category,
-      createdAt: new Date().toISOString(),
-      dueDate: newTodo.dueDate || undefined
+      createdAt: new Date().toISOString()
     };
 
     setTodos([todo, ...todos]);
     setNewTodo({
       title: "",
-      description: "",
-      priority: "medium",
-      category: "general",
-      dueDate: ""
+      description: ""
     });
     setIsAddDialogOpen(false);
   };
@@ -102,10 +86,7 @@ export default function TodosPage() {
         ? {
             ...todo,
             title: newTodo.title,
-            description: newTodo.description,
-            priority: newTodo.priority,
-            category: newTodo.category,
-            dueDate: newTodo.dueDate || undefined
+            description: newTodo.description
           }
         : todo
     );
@@ -115,10 +96,7 @@ export default function TodosPage() {
     setEditingTodo(null);
     setNewTodo({
       title: "",
-      description: "",
-      priority: "medium",
-      category: "general",
-      dueDate: ""
+      description: ""
     });
   };
 
@@ -136,35 +114,16 @@ export default function TodosPage() {
     setEditingTodo(todo);
     setNewTodo({
       title: todo.title,
-      description: todo.description,
-      priority: todo.priority,
-      category: todo.category,
-      dueDate: todo.dueDate || ""
+      description: todo.description
     });
     setIsEditDialogOpen(true);
   };
 
-  const getPriorityBadge = (priority: string) => {
-    const colors = {
-      high: "bg-red-100 text-red-800 hover:bg-red-100",
-      medium: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-      low: "bg-green-100 text-green-800 hover:bg-green-100"
-    };
-    return <Badge variant="secondary" className={colors[priority as keyof typeof colors]}>
-      {priority.toUpperCase()}
-    </Badge>;
-  };
-
-  const getCategoryBadge = (category: string) => {
-    return <Badge variant="outline">{category}</Badge>;
-  };
 
   const filteredTodos = todos.filter(todo => {
     const matchesSearch = todo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          todo.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === "all" || todo.category === filterCategory;
-    const matchesPriority = filterPriority === "all" || todo.priority === filterPriority;
-    return matchesSearch && matchesCategory && matchesPriority;
+    return matchesSearch;
   });
 
   const completedCount = todos.filter(todo => todo.completed).length;
@@ -234,47 +193,6 @@ export default function TodosPage() {
                       value={newTodo.description}
                       onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
                       placeholder="Enter description (optional)..."
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="priority">Priority</Label>
-                      <Select value={newTodo.priority} onValueChange={(value: 'low' | 'medium' | 'high') => setNewTodo({ ...newTodo, priority: value })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {priorities.map(priority => (
-                            <SelectItem key={priority} value={priority}>
-                              {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Select value={newTodo.category} onValueChange={(value) => setNewTodo({ ...newTodo, category: value })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map(category => (
-                            <SelectItem key={category} value={category}>
-                              {category.charAt(0).toUpperCase() + category.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="dueDate">Due Date (optional)</Label>
-                    <Input
-                      id="dueDate"
-                      type="date"
-                      value={newTodo.dueDate}
-                      onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
                     />
                   </div>
                 </div>
@@ -347,32 +265,6 @@ export default function TodosPage() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterPriority} onValueChange={setFilterPriority}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filter by priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                {priorities.map(priority => (
-                  <SelectItem key={priority} value={priority}>
-                    {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Todo List */}
@@ -403,8 +295,6 @@ export default function TodosPage() {
                           <h4 className={`font-medium truncate ${todo.completed ? 'line-through text-muted-foreground' : ''}`}>
                             {todo.title}
                           </h4>
-                          {getPriorityBadge(todo.priority)}
-                          {getCategoryBadge(todo.category)}
                         </div>
                         {todo.description && (
                           <p className={`text-sm text-muted-foreground mb-2 ${todo.completed ? 'line-through' : ''}`}>
@@ -413,9 +303,6 @@ export default function TodosPage() {
                         )}
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>Created: {new Date(todo.createdAt).toLocaleDateString()}</span>
-                          {todo.dueDate && (
-                            <span>Due: {new Date(todo.dueDate).toLocaleDateString()}</span>
-                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -444,11 +331,11 @@ export default function TodosPage() {
                   <Circle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-muted-foreground mb-2">No todos found</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {searchTerm || filterCategory !== "all" || filterPriority !== "all"
-                      ? "Try adjusting your filters or search terms."
+                    {searchTerm
+                      ? "Try adjusting your search terms."
                       : "Get started by adding your first todo item."}
                   </p>
-                  {!searchTerm && filterCategory === "all" && filterPriority === "all" && (
+                  {!searchTerm && (
                     <Button onClick={() => setIsAddDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Your First Todo
@@ -485,47 +372,6 @@ export default function TodosPage() {
                     value={newTodo.description}
                     onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
                     placeholder="Enter description (optional)..."
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-priority">Priority</Label>
-                    <Select value={newTodo.priority} onValueChange={(value: 'low' | 'medium' | 'high') => setNewTodo({ ...newTodo, priority: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {priorities.map(priority => (
-                          <SelectItem key={priority} value={priority}>
-                            {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="edit-category">Category</Label>
-                    <Select value={newTodo.category} onValueChange={(value) => setNewTodo({ ...newTodo, category: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category.charAt(0).toUpperCase() + category.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-dueDate">Due Date (optional)</Label>
-                  <Input
-                    id="edit-dueDate"
-                    type="date"
-                    value={newTodo.dueDate}
-                    onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
                   />
                 </div>
               </div>
