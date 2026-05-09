@@ -8,6 +8,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Edit, Mail, Calendar, CheckCircle, X, BookOpen, Plus, Info, CalendarDays } from "lucide-react";
 
+export async function generateStaticParams() {
+  // For static export, generate some sample student IDs
+  // In a real application, this would fetch from your database
+  return [
+    { id: '1' },
+    { id: '2' },
+    { id: '3' },
+    { id: '4' },
+    { id: '5' },
+  ];
+}
+
 export default function StudentProfilePage() {
   return (
     <div className="flex bg-background min-h-screen font-body-md antialiased text-on-background">
