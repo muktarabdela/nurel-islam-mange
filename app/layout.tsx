@@ -18,10 +18,29 @@ const manrope = Manrope({
 });
 
 export const metadata = {
-  title: "nurel islam student management",
+  title: "Nurel Islam Student Management",
   description: "Islamic Excellence Admin Portal",
   manifest: '/manifest.json',
   themeColor: '#166534',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Nurel Islam',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Nurel Islam Student Management',
+    title: 'Nurel Islam Student Management',
+    description: 'Islamic Excellence Admin Portal',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Nurel Islam Student Management',
+    description: 'Islamic Excellence Admin Portal',
+  },
 };
 
 export default function RootLayout({
@@ -35,6 +54,23 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                      console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                      console.log('SW registration failed: ', registrationError);
+                    });
+                });
+              }
+            `,
+          }}
         />
       </head>
       {/* Base classes derived directly from the new HTML files */}

@@ -1,11 +1,17 @@
 /** @type {import('next').NextConfig} */
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
-});
-
 const nextConfig = {
-  // your existing config options here
+  // PWA configuration
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb',
+    },
+  },
+  // Enable static optimization for PWA
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
 };
 
-module.exports = withPWA(nextConfig);
+module.exports = nextConfig;
