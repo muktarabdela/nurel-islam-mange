@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, Users, BookOpen, GraduationCap, UserCheck, BarChart3, Building } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, GraduationCap, UserCheck, BarChart3, Building, X, Menu } from "lucide-react";
+import { useState, useEffect } from "react";
 
 // Define the navigation links in an array so it's easy to manage
 const navItems = [
@@ -19,59 +20,170 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
 
   return (
-    <TooltipProvider>
-      <aside className="fixed left-0 top-0 h-full w-[280px] border-r border-border bg-background shadow-lg z-50 hidden md:flex flex-col antialiased">
-        <div className="flex flex-col gap-2 p-6 h-full">
-          
-          {/* Branding / Logo */}
-          <div className="mb-8 px-4 flex items-center gap-3">
-            <Avatar className="h-10 w-10 bg-primary/10">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                <Building className="h-5 w-5" />
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-primary">
-                Nurel Islam Management
-              </h1>
+    <>
+      {/* Mobile Menu Toggle Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="md:hidden fixed top-4 left-4 z-50 bg-background/80 backdrop-blur-sm border border-border"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+      >
+        {isMobileMenuOpen ? (
+          <X className="h-5 w-5" />
+        ) : (
+          <Menu className="h-5 w-5" />
+        )}
+      </Button>
+
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <TooltipProvider>
+        {/* Desktop Sidebar */}
+        <aside className="fixed left-0 top-0 h-full w-[280px] border-r border-border bg-background shadow-lg z-50 hidden md:flex flex-col antialiased">
+          <div className="flex flex-col gap-2 p-6 h-full">
+            
+            {/* Branding / Logo */}
+            <div className="mb-8 px-4 flex items-center gap-3">
+              <Avatar className="h-10 w-10 bg-primary/10">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  <Building className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-primary">
+                  Nurel Islam Management
+                </h1>
+              </div>
             </div>
+
+            {/* Navigation Links */}
+            <nav className="flex flex-col gap-2 flex-grow">
+              {navItems.map((item) => {
+                // Check if current route matches the link path
+                const isActive = pathname === item.path;
+                const Icon = item.icon;
+
+                return (
+                  <Tooltip key={item.name}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        asChild
+                        variant={isActive ? "secondary" : "ghost"}
+                        className={`w-full justify-start gap-3 h-12 ${
+                          isActive ? "bg-secondary -foreground" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Link href={item.path} className="flex items-center gap-3 w-full">
+                          <Icon className="h-5 w-5" />
+                          <span>{item.name}</span>
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>{item.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </nav>
+            
           </div>
+        </aside>
 
-          {/* Navigation Links */}
-          <nav className="flex flex-col gap-2 flex-grow">
-            {navItems.map((item) => {
-              // Check if current route matches the link path
-              const isActive = pathname === item.path;
-              const Icon = item.icon;
+        {/* Mobile Sidebar */}
+        <aside className={`fixed left-0 top-0 h-full w-[280px] border-r border-border bg-background shadow-lg z-50 md:hidden flex flex-col antialiased transform transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
+          <div className="flex flex-col gap-2 p-6 h-full">
+            
+            {/* Mobile Header with Close Button */}
+            <div className="flex items-center justify-between mb-8 px-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 bg-primary/10">
+                  <AvatarFallback className="bg-primary text-primary-foreground">
+                    <Building className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h1 className="text-lg font-bold tracking-tight text-primary">
+                    Nurel Islam Management
+                  </h1>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
-              return (
-                <Tooltip key={item.name}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      asChild
-                      variant={isActive ? "secondary" : "ghost"}
-                      className={`w-full justify-start gap-3 h-12 ${
-                        isActive ? "bg-secondary -foreground" : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Link href={item.path} className="flex items-center gap-3 w-full">
-                        <Icon className="h-5 w-5" />
-                        <span>{item.name}</span>
-                      </Link>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>{item.name}</p>
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-          </nav>
-          
-        </div>
-      </aside>
-    </TooltipProvider>
+            {/* Mobile Navigation Links */}
+            <nav className="flex flex-col gap-2 flex-grow">
+              {navItems.map((item) => {
+                // Check if current route matches the link path
+                const isActive = pathname === item.path;
+                const Icon = item.icon;
+
+                return (
+                  <Button
+                    key={item.name}
+                    asChild
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={`w-full justify-start gap-3 h-12 ${
+                      isActive ? "bg-secondary -foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Link href={item.path} className="flex items-center gap-3 w-full">
+                      <Icon className="h-5 w-5" />
+                      <span>{item.name}</span>
+                    </Link>
+                  </Button>
+                );
+              })}
+            </nav>
+            
+          </div>
+        </aside>
+      </TooltipProvider>
+    </>
   );
 }

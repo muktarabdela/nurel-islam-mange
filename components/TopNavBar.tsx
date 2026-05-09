@@ -24,7 +24,7 @@ export default function TopNavBar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-surface-container-highest bg-surface-container-lowest/80 backdrop-blur-md text-primary font-body-sm flex justify-between items-center h-16 px-8">
+    <header className="sticky top-0 z-40 w-full border-b border-surface-container-highest bg-surface-container-lowest/80 backdrop-blur-md text-primary font-body-sm flex justify-between items-center h-16 px-8 md:px-8 pl-20 md:pl-8">
       
       {/* Left side: Search */}
       <div className="flex items-center gap-4 w-1/3">
