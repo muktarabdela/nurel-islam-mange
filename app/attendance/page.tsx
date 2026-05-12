@@ -21,6 +21,7 @@ export default function AttendancePage() {
   const [selectedEthiopianDate, setSelectedEthiopianDate] = useState<string>('');
   const [selectedEthiopianComponents, setSelectedEthiopianComponents] = useState<EthiopianDateComponents | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [attendanceLoading, setAttendanceLoading] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 10;
@@ -73,7 +74,7 @@ const fetchAttendance = async () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [attendance]);
+  }, [attendance, selectedStatus]);
 
   const getStudentName = (studentId: string) => {
     const student = students.find(s => s.id === studentId);
@@ -107,11 +108,21 @@ const fetchAttendance = async () => {
     }
   };
 
-  const totalPages = Math.ceil(attendance.length / itemsPerPage);
+  // Apply status filter to attendance data
+  const filteredAttendance = selectedStatus === 'all' 
+    ? attendance 
+    : attendance.filter(a => a.status === selectedStatus);
+
+  // Calculate attendance summary statistics (from filtered data)
+  const totalPresent = filteredAttendance.filter(a => a.status === 'present').length;
+  const totalAbsent = filteredAttendance.filter(a => a.status === 'absent').length;
+  const totalLate = filteredAttendance.filter(a => a.status === 'late').length;
+
+  const totalPages = Math.ceil(filteredAttendance.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedAttendance = attendance.slice(startIndex, endIndex);
-
+  const paginatedAttendance = filteredAttendance.slice(startIndex, endIndex);
+  
   const handlePrevPage = () => {
     setCurrentPage(prev => Math.max(prev - 1, 1));
   };
@@ -189,14 +200,12 @@ const fetchAttendance = async () => {
                 />
               </div>
               
-              {/* Class Selector */}
-              <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
-                <label className="text-sm font-medium text-muted-foreground" htmlFor="class-select">
-                  Class
-                </label>
+              {/* Class Filter */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-muted-foreground">Class</label>
                 <Select value={selectedClass} onValueChange={setSelectedClass}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a class" />
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select class" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Classes</SelectItem>
@@ -205,6 +214,22 @@ const fetchAttendance = async () => {
                         {classItem.name}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-muted-foreground">Status</label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -227,7 +252,30 @@ const fetchAttendance = async () => {
           {/* Attendance Records Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle>Attendance Records ({attendance.length})</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-sm text-muted-foreground">Present</span>
+                <span className="text-sm font-medium">
+                  {totalPresent}
+                </span>
+              </CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                <span className="text-sm text-muted-foreground">Late</span>
+                <span className="text-sm font-medium">
+                  {totalLate}
+                </span>
+              </CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <span className="text-sm text-muted-foreground">Absent</span>
+                <span className="text-sm font-medium">
+                  {totalAbsent}
+                </span>
+              </CardTitle>
+              <CardTitle>
+                Total ({filteredAttendance.length})
+              </CardTitle>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
@@ -314,10 +362,10 @@ const fetchAttendance = async () => {
           </Card>
 
           {/* Pagination Controls */}
-          {attendance.length > itemsPerPage && (
+          {filteredAttendance.length > itemsPerPage && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                Showing {startIndex + 1} to {Math.min(endIndex, attendance.length)} of {attendance.length} records
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredAttendance.length)} of {filteredAttendance.length} records
               </div>
               <div className="flex items-center gap-2">
                 <Button

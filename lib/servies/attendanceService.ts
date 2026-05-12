@@ -39,5 +39,13 @@ export const attendanceService = {
 
     if (error) throw new Error(error.message);
     return data;
+  },
+  async getAll() {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select('*, student:students(*)');
+
+    if (error) throw new Error(error.message);
+    return data || [];
   }
 };

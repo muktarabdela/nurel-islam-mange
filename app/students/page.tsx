@@ -88,9 +88,7 @@ export default function StudentsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteStudent = async (student: StudentModel) => {
-    if (!confirm(`Are you sure you want to delete ${student.full_name}?`)) return;
-    
+  const handleDeleteStudent = async (student: StudentModel) => {    
     setDeleteLoading(student.id);
     try {
       await studentService.delete(student.id);
@@ -341,7 +339,7 @@ export default function StudentsPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex justify-end gap-2">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
@@ -361,7 +359,7 @@ export default function StudentsPage() {
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </AlertDialogTrigger>
-                                  <AlertDialogContent>
+                                  <AlertDialogContent className="w-full">
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                       <AlertDialogDescription>

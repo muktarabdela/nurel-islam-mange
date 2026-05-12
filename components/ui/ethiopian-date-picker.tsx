@@ -6,7 +6,8 @@ import { Label } from "./label";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCurrentEthiopianDate, formatEthiopianDate, createEthiopianDateString, EthiopianDateComponents } from "@/lib/utils/ethiopian-date";
+// Make sure to add `ethiopianToGregorian` to your imports here
+import { getCurrentEthiopianDate, formatEthiopianDate, createEthiopianDateString, EthiopianDateComponents, ethiopianToGregorian } from "@/lib/utils/ethiopian-date";
 import EthiopianCalendar from "ethiopian-calendar-new";
 
 interface EthiopianDatePickerProps {
@@ -57,6 +58,14 @@ export function EthiopianDatePicker({
   };
   
   const daysInMonth = getDaysInMonth(displayYear, displayMonth);
+
+  // Get starting day of the week for the current month
+  const getStartingDayOfWeek = (year: number, month: number) => {
+    const gregorianDate = ethiopianToGregorian(year, month, 1);
+    return gregorianDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  };
+
+  const startingDay = getStartingDayOfWeek(displayYear, displayMonth);
   
   const handleDateSelect = (day: number) => {
     const ethiopianDate = createEthiopianDateString(displayYear, displayMonth, day);
@@ -166,6 +175,11 @@ export function EthiopianDatePicker({
               <div key={index} className="text-xs font-medium text-muted-foreground p-1">
                 {day}
               </div>
+            ))}
+            
+            {/* Empty cells to align the first day of the month */}
+            {Array.from({ length: startingDay }).map((_, index) => (
+              <div key={`empty-${index}`} className="h-8 w-8 p-0" />
             ))}
             
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => (

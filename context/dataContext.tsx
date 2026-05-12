@@ -17,6 +17,8 @@ import { ustazService } from '@/lib/servies/ustazService';
 import { classService } from '@/lib/servies/classService';
 import { behaviorNoteService } from '@/lib/servies/behaviorNoteService';
 import { todoService } from '@/lib/servies/todoService';
+import { classUstazService } from '@/lib/servies/classUstazService'; // Adjust path
+import { ClassUstazModel } from '@/models/ClassUstaz';
 
 type DataContextType = {
   students: StudentModel[];
@@ -25,6 +27,7 @@ type DataContextType = {
   classes: ClassModel[];
   behaviorNotes: BehaviorNoteModel[];
   todos: TodoModel[];
+  classUstaz: ClassUstazModel[]; // Adjust type if needed
 
   loading: boolean;
   error: string | null;
@@ -41,6 +44,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [classes, setClasses] = useState<ClassModel[]>([]);
   const [behaviorNotes, setBehaviorNotes] = useState<BehaviorNoteModel[]>([]);
   const [todos, setTodos] = useState<TodoModel[]>([]);
+  const [classUstaz, setClassUstaz] = useState<ClassUstazModel[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +59,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         ustazData,
         classesData,
         behaviorNotesData,
-        todosData
+        todosData,
+        classUstazData
       ] = await Promise.all([
         studentService.getAll(),
         ustazService.getAll(),
@@ -63,7 +68,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         // NOTE: Behavior notes can be heavy → optional
         // You can remove this if not needed globally
         behaviorNoteService.getAll(),
-        todoService.getAll()
+        todoService.getAll(),
+        classUstazService.getAll()
       ]);
 
       setStudents(studentsData);
@@ -71,10 +77,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClasses(classesData);
       setBehaviorNotes(behaviorNotesData);
       setTodos(todosData);
+      setClassUstaz(classUstazData);
 
       // Attendance → load separately (better performance)
-      const today = new Date().toISOString().split('T')[0];
-      const attendanceData = await attendanceService.getByDate(today);
+      const attendanceData = await attendanceService.getAll();
 
       setAttendance(attendanceData);
 
@@ -97,6 +103,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     classes,
     behaviorNotes,
     todos,
+    classUstaz,
     loading,
     error,
     refreshData: fetchAllData,
