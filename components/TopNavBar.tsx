@@ -2,23 +2,23 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getAdminFromSession, logout } from "@/lib/auth";
 
 export default function TopNavBar() {
   const router = useRouter();
   const [adminName, setAdminName] = useState("Admin");
 
   useEffect(() => {
-    // Get admin data from sessionStorage
-    const adminData = sessionStorage.getItem('admin');
-    if (adminData) {
-      const admin = JSON.parse(adminData);
+    // Get admin data from cookie
+    const admin = getAdminFromSession();
+    if (admin) {
       setAdminName(admin.full_name || "Admin");
     }
   }, []);
 
   const handleLogout = () => {
-    // Clear admin data from sessionStorage
-    sessionStorage.removeItem('admin');
+    // Clear admin data from cookie
+    logout();
     // Redirect to login page
     router.push('/login');
   };

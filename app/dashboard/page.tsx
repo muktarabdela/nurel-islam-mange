@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
 import { Button } from "@/components/ui/button";
@@ -260,7 +261,9 @@ const processedStudents = useMemo(() => {
                         <TableRow key={s.id} className="hover:bg-red-50/50">
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
-                              <span>{s.full_name}</span>
+                              <Link href={`/students/${s.id}`} className="hover:text-primary hover:underline cursor-pointer">
+                                {s.full_name}
+                              </Link>
                             </div>
                           </TableCell>
                           <TableCell>{getClassName(s.class_id || '')}</TableCell>

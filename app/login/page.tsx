@@ -12,6 +12,7 @@ export default function LoginPage() {
     phone_number: "",
     password: ""
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -30,8 +31,8 @@ export default function LoginPage() {
       const response = await adminService.login(formData);
       
       if (response.success) {
-        // Store admin data in sessionStorage (simple approach)
-        sessionStorage.setItem('admin', JSON.stringify(response.admin));
+        // Store admin data in cookie for middleware authentication
+        document.cookie = `admin=${JSON.stringify(response.admin)}; path=/; max-age=86400; SameSite=Strict`;
         router.push('/dashboard');
       } else {
         setError(response.message);
@@ -94,7 +95,7 @@ export default function LoginPage() {
                   className="block w-full pl-[40px] pr-4 py-3 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 outline-none" 
                   id="phone_number" 
                   name="phone_number" 
-                  placeholder="+1234567890" 
+                  placeholder="09########" 
                   required 
                   type="tel"
                   value={formData.phone_number}
@@ -113,28 +114,32 @@ export default function LoginPage() {
                 >
                   Password
                 </label>
-                <Link 
-                  className="font-body-sm text-body-sm text-primary hover:text-primary-fixed-dim transition-colors" 
-                  href="#"
-                >
-                  Forgot password?
-                </Link>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
                 </div>
                 <input 
-                  className="block w-full pl-[40px] pr-4 py-3 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 outline-none" 
+                  className="block w-full pl-[40px] pr-12 py-3 bg-surface border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 outline-none" 
                   id="password" 
                   name="password" 
                   placeholder="••••••••" 
                   required 
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleInputChange}
                   disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-auto text-outline hover:text-on-surface transition-colors"
+                  disabled={isLoading}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
               </div>
             </div>
 
