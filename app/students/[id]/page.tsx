@@ -12,7 +12,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User, Edit, Mail, Calendar, CheckCircle, X, BookOpen, Plus, Info, CalendarDays, ChevronLeft, ChevronRight, Activity } from "lucide-react";
 import { useData } from "@/context/dataContext";
 import { formatEthiopianDate, getCurrentEthiopianDate, EthiopianDateComponents } from "@/lib/utils/ethiopian-date";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { attendanceService } from "@/lib/servies/attendanceService";
 
 const ETHIOPIAN_MONTHS = [
   "Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yekatit",
@@ -30,18 +31,48 @@ const getDaysInEthiopianMonth = (month: number, year: number) => {
 export default function StudentProfilePage() {
   const params = useParams();
   const studentId = params.id as string;
+
   const { students, attendance, classes, behaviorNotes, loading } = useData();
   
+  const [localAttendance, setLocalAttendance] = useState<any[]>([]);
+  const [fetchingLocal, setFetchingLocal] = useState(false);
   const [selectedEthiopianMonth, setSelectedEthiopianMonth] = useState<EthiopianDateComponents>(getCurrentEthiopianDate());
   
   // Get student data
-  const student = students.find(s => s.id === studentId);
-  const studentClass = classes.find(c => c.id === student?.class_id);
+  const student = students.find(s => 
+    s.id?.toString().trim() === studentId?.toString().trim()
+  );
+  const studentClass = classes.find(c => 
+    c.id?.toString().trim() === student?.class_id?.toString().trim()
+  );
   
   // Get student's attendance specifically for this student
-  const studentAttendance = attendance.filter(a => a.student_id === studentId);
+useEffect(() => {
+  async function loadStudentData() {
+    if (!studentId) return;
+    setFetchingLocal(true);
+    try {
+      // Fetch specifically for this student to bypass the 1000 row limit
+      const data = await attendanceService.getByStudentId(studentId);
+      setLocalAttendance(data);
+    } catch (err) {
+      console.error("Error loading attendance:", err);
+    } finally {
+      setFetchingLocal(false);
+    }
+  }
+  loadStudentData();
+}, [studentId]);
+
+// Use localAttendance instead of filtering the global context
+const studentAttendance = localAttendance;
   
-  const studentBehaviorNotes = behaviorNotes.filter(n => n.student_id === studentId).sort(
+
+    const idExistsInGlobalList = attendance.some(a => String(a.student_id).includes(studentId));
+
+  const studentBehaviorNotes = behaviorNotes.filter(n => 
+    n.student_id?.toString().trim() === studentId?.toString().trim()
+  ).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
   

@@ -219,7 +219,7 @@ export default function ClassesPage() {
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <DropdownMenuItem 
-                                      onClick={() => {}}
+                                      onSelect={(e) => e.preventDefault()}
                                       className="text-destructive focus:text-destructive"
                                     >
                                       <Trash2 className="h-4 w-4 mr-2" />

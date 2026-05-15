@@ -1,5 +1,5 @@
 "use client"
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Users, UserCheck, Clock, Calendar, TrendingUp, ArrowRight, Plus, CheckSquare, School, BookOpen, Users2, Building } from "lucide-react";
+import { Users, UserCheck, Clock, Calendar, TrendingUp, ArrowRight, Plus, CheckSquare, School, BookOpen, Users2, Building, AlertCircle, Phone } from "lucide-react";
 import { useData } from "@/context/dataContext";
 import { isAuthenticated } from "@/lib/auth";
+import { attendanceService } from "@/lib/servies/attendanceService";
 
 export default function StudentsPage() {
   const router = useRouter();
@@ -22,6 +23,53 @@ export default function StudentsPage() {
     }
   }, [router]);
   const { students, attendance, ustaz, classes, loading, error, refreshData } = useData();
+const [studentStatsMap, setStudentStatsMap] = useState<Record<string, any>>({});
+const [statsLoading, setStatsLoading] = useState(true);
+
+
+// 1. Fetch accurate stats from the DB on load
+useEffect(() => {
+  async function loadStats() {
+    try {
+      const stats = await attendanceService.getAllStudentStats();
+      setStudentStatsMap(stats);
+    } catch (err) {
+      console.error("Failed to load stats", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+  loadStats();
+}, []);
+
+// 2. Process students using the fetched stats
+
+
+const processedStudents = useMemo(() => {
+  return students
+    .filter(s => s.is_active)
+    .map(student => {
+      const stats = studentStatsMap[student.id] || { present: 0, absent: 0, late: 0, total: 0 };
+      
+      const presentPct = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+      
+      // LOGIC: 4 absent in last 20 OR 10 late in last 20
+      // Note: stats.total will be at most 20 based on our service update
+      const needsCommunication = (stats.absent >= 4) || (stats.late >= 10);
+      
+      let reason = "";
+      if (stats.absent >= 4) {
+        reason = `Need Parent Communication (Absents: ${stats.absent}/${stats.total})`;
+      } else if (stats.late >= 10) {
+        reason = `Need Parent Communication (Lates: ${stats.late}/${stats.total})`;
+      }
+
+      return {
+        ...student,
+        stats: { ...stats, presentPct, needsCommunication, reason }
+      };
+    });
+}, [students, studentStatsMap]);
 
   // Calculate statistics
   const totalStudents = students.filter(s => s.is_active).length;
@@ -36,41 +84,16 @@ export default function StudentsPage() {
   const absentCount = todayAttendance.filter(a => a.status === 'absent').length;
   const attendanceRate = totalStudents > 0 ? (presentCount / totalStudents) * 100 : 0;
 
-  // Get recent attendance records (last 10)
-  const recentAttendance = attendance
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 10);
-
-  // Helper function to get student initials
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  // Helper function to get student name by ID
-  const getStudentName = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student ? student.full_name : 'Unknown Student';
-  };
 
   // Helper function to get class name by ID
   const getClassName = (classId: string) => {
     const classItem = classes.find(c => c.id === classId);
     return classItem ? classItem.name : 'Unknown Class';
   };
+  // Separate the lists
+  const attentionRequired = processedStudents.filter(s => s.stats.needsCommunication);
+  const goodStanding = processedStudents.filter(s => !s.stats.needsCommunication && s.stats.total > 0);
 
-  // Status badge styling
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'present':
-        return <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">PRESENT</Badge>;
-      case 'late':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">LATE</Badge>;
-      case 'absent':
-        return <Badge variant="destructive">ABSENT</Badge>;
-      default:
-        return <Badge variant="secondary">{status.toUpperCase()}</Badge>;
-    }
-  };
 
   if (loading) {
     return (
@@ -208,55 +231,60 @@ export default function StudentsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Main Table Section (Span 2) */}
-            <Card className="lg:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle>Recent Attendance</CardTitle>
-                <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                  View All <ArrowRight className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-              <CardContent>
+          <section className="lg:col-span-2">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-red-900">Need Parent Communication</h2>
+                <p className="text-sm text-muted-foreground">Students who have reached 4 absent or 10 late arrivals within 20 records.</p>
+              </div>
+            </div>
+
+            <Card className="border-red-200 shadow-md">
+              <CardContent className="p-0">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student Name</TableHead>
-                      <TableHead>Class</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
+                  <TableHeader className="bg-red-50">
+                  <TableRow>
+    <TableHead className="font-bold text-red-900">Student</TableHead>
+    <TableHead>Class</TableHead>
+    <TableHead className="text-center">Absents (Last 20)</TableHead>
+    <TableHead className="text-center">Lates (Last 20)</TableHead>
+    <TableHead className="text-red-700">Status</TableHead>
+  </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentAttendance.length > 0 ? (
-                      recentAttendance.map((record) => {
-                        const studentName = getStudentName(record.student_id);
-                        const className = getClassName(record.class_id);
-                        const initials = getInitials(studentName);
-                        const time = new Date(record.created_at).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit',
-                          hour12: true 
-                        });
-                        
-                        return (
-                          <TableRow key={record.id}>
-                            <TableCell className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                                {initials}
-                              </div>
-                              <span className="font-medium">{studentName}</span>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">{className}</TableCell>
-                            <TableCell className="text-muted-foreground">{time}</TableCell>
-                            <TableCell>
-                              {getStatusBadge(record.status)}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                    {attentionRequired.length > 0 ? (
+                      attentionRequired.map((s) => (
+                        <TableRow key={s.id} className="hover:bg-red-50/50">
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{s.full_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{getClassName(s.class_id || '')}</TableCell>
+                         <TableCell className="text-center">
+  <Badge variant="destructive" className="rounded-full">
+    {s.stats.absent} / {s.stats.total}
+  </Badge>
+</TableCell>
+<TableCell className="text-center">
+  <Badge variant="secondary" className="bg-orange-100 text-orange-700 rounded-full">
+    {s.stats.late} / {s.stats.total}
+  </Badge>
+</TableCell>
+                          <TableCell>
+                            <span className="text-sm font-semibold text-red-600 italic underline decoration-red-200">
+                              {s.stats.reason}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                          No attendance records found
+                        <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                          No students require immediate communication. Great job!
                         </TableCell>
                       </TableRow>
                     )}
@@ -264,6 +292,7 @@ export default function StudentsPage() {
                 </Table>
               </CardContent>
             </Card>
+          </section>
 
             {/* Side Info Widget */}
             <Card className="flex flex-col">
