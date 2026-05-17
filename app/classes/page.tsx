@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
 import ClassModal from "@/components/ClassModal";
@@ -24,6 +25,7 @@ interface ClassWithUstaz extends ClassModel {
 }
 
 export default function ClassesPage() {
+  const router = useRouter();
   const { classes, ustaz, loading, error, refreshData } = useData();
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isUstazModalOpen, setIsUstazModalOpen] = useState(false);
@@ -172,7 +174,11 @@ export default function ClassesPage() {
                     </TableRow>
                   ) : (
                     paginatedClasses.map((classItem) => (
-                      <TableRow key={classItem.id} className="hover:bg-muted/50">
+                      <TableRow 
+                        key={classItem.id} 
+                        className="hover:bg-muted/50 cursor-pointer"
+                        onClick={() => router.push(`/classes/${classItem.id}`)}
+                      >
                         <TableCell>
                           <div className="font-semibold">{classItem.name}</div>
                         </TableCell>
@@ -200,7 +206,7 @@ export default function ClassesPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="relative inline-block">
+                          <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

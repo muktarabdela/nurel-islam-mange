@@ -100,5 +100,45 @@ async getAllStudentStats() {
   });
 
   return statsMap;
+},
+
+async getStudentStatsByClass(classId: string) {
+  // Fetch attendance records for a specific class
+  const { data, error } = await supabase
+    .from(TABLE_NAME)
+    .select('student_id, status, date')
+    .eq('class_id', classId)
+    .order('date', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  // Group records by student ID
+  const studentRecords: Record<string, string[]> = {};
+  
+  data.forEach(record => {
+    const sId = String(record.student_id).trim();
+    if (!studentRecords[sId]) {
+      studentRecords[sId] = [];
+    }
+    // Only push if we haven't reached 20 records yet for this student
+    if (studentRecords[sId].length < 20) {
+      studentRecords[sId].push(record.status);
+    }
+  });
+
+  // Calculate stats based on those (up to) 20 records
+  const statsMap: Record<string, { present: number, absent: number, late: number, total: number }> = {};
+  
+  Object.keys(studentRecords).forEach(sId => {
+    const statuses = studentRecords[sId];
+    statsMap[sId] = {
+      total: statuses.length,
+      present: statuses.filter(s => s === 'present').length,
+      absent: statuses.filter(s => s === 'absent').length,
+      late: statuses.filter(s => s === 'late').length,
+    };
+  });
+
+  return statsMap;
 }
 };
