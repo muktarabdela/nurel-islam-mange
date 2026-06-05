@@ -14,6 +14,7 @@ import { useData } from "@/context/dataContext";
 import { formatEthiopianDate, getCurrentEthiopianDate, EthiopianDateComponents } from "@/lib/utils/ethiopian-date";
 import { useState, useMemo, useEffect } from "react";
 import { attendanceService } from "@/lib/servies/attendanceService";
+import { studentService } from "@/lib/servies/studentService";
 
 const ETHIOPIAN_MONTHS = [
   "Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yekatit",
@@ -37,6 +38,7 @@ export default function StudentProfilePage() {
   const [localAttendance, setLocalAttendance] = useState<any[]>([]);
   const [fetchingLocal, setFetchingLocal] = useState(false);
   const [selectedEthiopianMonth, setSelectedEthiopianMonth] = useState<EthiopianDateComponents>(getCurrentEthiopianDate());
+  const [updatingPayment, setUpdatingPayment] = useState(false);
   
   // Get student data
   const student = students.find(s => 
@@ -122,6 +124,23 @@ const studentAttendance = localAttendance;
       return { ...prev, ethiopian_month: prev.ethiopian_month + 1 };
     });
   };
+
+  const handleToggleSecondMonthPayment = async () => {
+    if (!student) return;
+    setUpdatingPayment(true);
+    try {
+      await studentService.update(student.id, {
+        paid_second_month: !student.paid_second_month
+      });
+      // Refresh data to get updated student
+      window.location.reload();
+    } catch (err) {
+      console.error('Error updating payment status:', err);
+      alert('Failed to update payment status');
+    } finally {
+      setUpdatingPayment(false);
+    }
+  };
   
   if (loading) {
     return (
@@ -190,10 +209,12 @@ const studentAttendance = localAttendance;
           </div>
 
           {/* Bento Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            {/* Left Column */}
+            <div className="lg:col-span-1 flex flex-col gap-6">
             {/* Section 1: Basic Information */}
-            <Card className="lg:col-span-1 h-fit sticky top-6">
+            <Card className="h-fit sticky top-6">
               <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-4">
                 <Info className="h-4 w-4 text-muted-foreground" />
                 <CardTitle>Basic Information</CardTitle>
@@ -202,6 +223,26 @@ const studentAttendance = localAttendance;
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Parent Contact</p>
                   <p className="text-base">{student.parent_phone}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Parent Name</p>
+                  <p className="text-base">{student.parent_name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Father's Phone</p>
+                  <p className="text-base">{student.father_phone_number || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Mother's Phone</p>
+                  <p className="text-base">{student.mother_phone_number || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Age</p>
+                  <p className="text-base">{student.age || 'Not provided'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Address</p>
+                  <p className="text-base">{student.address || 'Not provided'}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Class</p>
@@ -218,8 +259,52 @@ const studentAttendance = localAttendance;
               </CardContent>
             </Card>
 
+            {/* Payment Status Card */}
+            <Card className="h-fit">
+              <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-4">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <CardTitle>Payment Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div>
+                    <p className="text-sm font-medium">First Month</p>
+                    <p className="text-xs text-muted-foreground">Summer Project</p>
+                  </div>
+                  <Badge variant={student.paid_first_month ? "default" : "secondary"} className={student.paid_first_month ? "bg-green-100 text-green-800 hover:bg-green-100 border-green-200" : ""}>
+                    {student.paid_first_month ? "Paid" : "Unpaid"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div>
+                    <p className="text-sm font-medium">Second Month</p>
+                    <p className="text-xs text-muted-foreground">Summer Project</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={student.paid_second_month ? "default" : "secondary"} className={student.paid_second_month ? "bg-green-100 text-green-800 hover:bg-green-100 border-green-200" : ""}>
+                      {student.paid_second_month ? "Paid" : "Unpaid"}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleToggleSecondMonthPayment}
+                      disabled={updatingPayment}
+                      className="h-8 px-2"
+                    >
+                      {updatingPayment ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                      ) : (
+                        <Edit className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+
             {/* Main Column (Attendance & Notes) */}
-            <div className="lg:col-span-2 flex flex-col gap-6">
+            <div className="lg:col-span-3 flex flex-col gap-6">
               
               {/* Section 2: Enhanced Attendance History */}
               <Card>

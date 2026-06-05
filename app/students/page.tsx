@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
 import StudentModal from "@/components/StudentModal";
 import { StudentExport } from "@/components/StudentExport";
+import { ContactExport } from "@/components/ContactExport";
 import { useData } from "@/context/dataContext";
 import { StudentModel } from "@/models/Student";
 import { studentService } from "@/lib/servies/studentService";
@@ -16,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Users, UserPlus, Filter, Search, Edit, Trash2, ChevronLeft, ChevronRight, Users2, GraduationCap, UserX, MoreHorizontal, Download, Eye } from "lucide-react";
+import { Users, UserPlus, Filter, Search, Edit, Trash2, ChevronLeft, ChevronRight, Users2, GraduationCap, UserX, MoreHorizontal, Download, Eye, Phone } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function StudentsPage() {
@@ -24,6 +25,7 @@ export default function StudentsPage() {
   const { students: studentsData, classes, ustaz, loading, error, refreshData } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isContactExportModalOpen, setIsContactExportModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentModel | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
@@ -204,6 +206,19 @@ export default function StudentsPage() {
                       Export PDF
                     </Button>
                   </div>
+
+                  {/* Download Contacts Button */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium text-muted-foreground invisible">Contacts</label>
+                    <Button 
+                      onClick={() => setIsContactExportModalOpen(true)} 
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                    >
+                      <Phone className="h-4 w-4" />
+                      Download Contacts
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -263,6 +278,12 @@ export default function StudentsPage() {
               <StudentExport 
                 isOpen={isExportModalOpen} 
                 onClose={() => setIsExportModalOpen(false)} 
+              />
+
+              {/* Contact Export Section */}
+              <ContactExport 
+                isOpen={isContactExportModalOpen} 
+                onClose={() => setIsContactExportModalOpen(false)} 
               />
 
               {/* Main Data Table */}
