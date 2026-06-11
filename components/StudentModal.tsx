@@ -35,7 +35,9 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
     address: '',
     class_id: '',
     is_active: true,
-    paid_first_month: false
+    paid_first_month: false,
+    is_summer_student: false,
+    is_free_student: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -54,7 +56,9 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         address: student.address || '',
         class_id: student.class_id || '',
         is_active: student.is_active ?? true,
-        paid_first_month: student.paid_first_month ?? false
+        paid_first_month: student.paid_first_month ?? false,
+        is_summer_student: student.is_summer_student ?? false,
+        is_free_student: student.is_free_student ?? false
       });
     } else {
       setFormData({
@@ -67,7 +71,9 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         address: '',
         class_id: '',
         is_active: true,
-        paid_first_month: false
+        paid_first_month: false,
+        is_summer_student: false,
+        is_free_student: false
       });
     }
     setError('');
@@ -103,7 +109,9 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         class_id: formData.class_id.trim() || null,
         is_active: formData.is_active,
         paid_first_month: formData.paid_first_month,
-        paid_second_month: student?.paid_second_month ?? false
+        paid_second_month: student?.paid_second_month ?? false,
+        is_summer_student: formData.is_summer_student,
+        is_free_student: formData.is_free_student
       };
 
       if (isEditing && student) {
@@ -318,6 +326,34 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
                 />
                 <label htmlFor="is_active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Active
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="is_summer_student"
+                  id="is_summer_student"
+                  checked={formData.is_summer_student}
+                  onChange={handleChange}
+                  className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                />
+                <label htmlFor="is_summer_student" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Summer Student
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="is_free_student"
+                  id="is_free_student"
+                  checked={formData.is_free_student}
+                  onChange={handleChange}
+                  className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                />
+                <label htmlFor="is_free_student" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Free Student
                 </label>
               </div>
             </div>

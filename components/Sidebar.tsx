@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, Users, BookOpen, GraduationCap, UserCheck, BarChart3, Building, X, Menu, CheckSquare } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, GraduationCap, UserCheck, BarChart3, Building, X, Menu, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 
 // Define the navigation links in an array so it's easy to manage
@@ -22,6 +21,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -73,23 +73,36 @@ export default function Sidebar() {
         />
       )}
 
-      <TooltipProvider>
         {/* Desktop Sidebar */}
-        <aside className="fixed left-0 top-0 h-full w-[280px] border-r border-border bg-background shadow-lg z-50 hidden md:flex flex-col antialiased">
+        <aside className={`fixed left-0 top-0 h-full border-r border-border bg-background shadow-lg z-50 hidden md:flex flex-col antialiased transition-all duration-300 ${isCollapsed ? 'w-[80px]' : 'w-[280px]'}`}>
           <div className="flex flex-col gap-2 p-6 h-full">
             
-            {/* Branding / Logo */}
+            {/* Branding / Logo and Collapse Toggle */}
             <div className="mb-8 px-4 flex items-center gap-3">
-              <Avatar className="h-10 w-10 bg-primary/10">
+              <Avatar className="h-10 w-10 bg-primary/10 flex-shrink-0">
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   <Building className="h-5 w-5" />
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h1 className="text-xl font-bold tracking-tight text-primary">
-                  Nurel Islam Management
-                </h1>
-              </div>
+              {!isCollapsed && (
+                <div>
+                  <h1 className="text-xl font-bold tracking-tight text-primary">
+                    Nurel Islam Management
+                  </h1>
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="ml-auto h-8 w-8"
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="h-5 w-5" />
+                ) : (
+                  <ChevronLeft className="h-5 w-5" />
+                )}
+              </Button>
             </div>
 
             {/* Navigation Links */}
@@ -100,28 +113,23 @@ export default function Sidebar() {
                 const Icon = item.icon;
 
                 return (
-                  <Tooltip key={item.name}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        asChild
-                        variant={isActive ? "secondary" : "ghost"}
-                        className={`w-full justify-start gap-3 h-12 ${
-                          isActive ? "bg-secondary -foreground" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <Link href={item.path} className="flex items-center gap-3 w-full">
-                          <Icon className="h-5 w-5" />
-                          <span>{item.name}</span>
-                        </Link>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>{item.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <Button
+                    key={item.name}
+                    asChild
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={`w-full justify-start gap-3 h-12 ${
+                      isActive ? "bg-secondary -foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Link href={item.path} className="flex items-center gap-3 w-full">
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      {!isCollapsed && <span>{item.name}</span>}
+                    </Link>
+                  </Button>
                 );
               })}
             </nav>
+
             
           </div>
         </aside>
@@ -184,7 +192,6 @@ export default function Sidebar() {
             
           </div>
         </aside>
-      </TooltipProvider>
     </>
   );
 }

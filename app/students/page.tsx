@@ -30,6 +30,7 @@ export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedUstaz, setSelectedUstaz] = useState('all');
+  const [filterStudentType, setFilterStudentType] = useState<'all' | 'summer' | 'free' | 'regular' | 'inactive'>('all');
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [classUstazAssignments, setClassUstazAssignments] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,16 +52,16 @@ export default function StudentsPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedClass, selectedUstaz]);
+  }, [searchTerm, selectedClass, selectedUstaz, filterStudentType]);
 
   const filteredStudents = studentsData.filter(student => {
-    const matchesSearch = 
+    const matchesSearch =
       student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.parent_phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.class_id?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesClass = selectedClass === 'all' || student.class_id === selectedClass;
-    
+
     // For ustaz filter, check if the student's class has the selected ustaz assigned
     let matchesUstaz = selectedUstaz === 'all';
     if (selectedUstaz !== 'all' && student.class_id) {
@@ -69,8 +70,20 @@ export default function StudentsPage() {
       );
       matchesUstaz = !!classAssignment;
     }
-    
-    return matchesSearch && matchesClass && matchesUstaz;
+
+    // For student type filter (summer/free/regular/inactive)
+    let matchesStudentType = filterStudentType === 'all';
+    if (filterStudentType === 'summer') {
+      matchesStudentType = student.is_summer_student === true;
+    } else if (filterStudentType === 'free') {
+      matchesStudentType = student.is_free_student === true;
+    } else if (filterStudentType === 'regular') {
+      matchesStudentType = student.is_summer_student === false && student.is_free_student === false;
+    } else if (filterStudentType === 'inactive') {
+      matchesStudentType = student.is_active === false;
+    }
+
+    return matchesSearch && matchesClass && matchesUstaz && matchesStudentType;
   });
 
   // Calculate pagination
@@ -185,6 +198,25 @@ export default function StudentsPage() {
                     </Select>
                   </div>
 
+                  {/* Student Type Filter */}
+                  <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
+                    <label className="text-sm font-medium text-muted-foreground" htmlFor="student-type-filter">
+                      Student Type
+                    </label>
+                    <Select value={filterStudentType} onValueChange={(value: 'all' | 'summer' | 'free' | 'regular' | 'inactive') => setFilterStudentType(value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Students</SelectItem>
+                        <SelectItem value="summer">Summer Students Only</SelectItem>
+                        <SelectItem value="free">Free Students Only</SelectItem>
+                        <SelectItem value="regular">Regular Students</SelectItem>
+                        <SelectItem value="inactive">Inactive Students</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Add Student Button */}
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium text-muted-foreground invisible">Add</label>
@@ -195,7 +227,7 @@ export default function StudentsPage() {
                   </div>
 
                   {/* Export PDF Button */}
-                  <div className="flex flex-col gap-2">
+                  {/* <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium text-muted-foreground invisible">Export</label>
                     <Button 
                       onClick={() => setIsExportModalOpen(true)} 
@@ -205,10 +237,10 @@ export default function StudentsPage() {
                       <Download className="h-4 w-4" />
                       Export PDF
                     </Button>
-                  </div>
+                  </div> */}
 
                   {/* Download Contacts Button */}
-                  <div className="flex flex-col gap-2">
+                  {/* <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium text-muted-foreground invisible">Contacts</label>
                     <Button 
                       onClick={() => setIsContactExportModalOpen(true)} 
@@ -218,7 +250,7 @@ export default function StudentsPage() {
                       <Phone className="h-4 w-4" />
                       Download Contacts
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
