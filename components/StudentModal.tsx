@@ -37,7 +37,8 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
     is_active: true,
     paid_first_month: false,
     is_summer_student: false,
-    is_free_student: false
+    is_free_student: false,
+    is_new_student: false
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,7 +59,8 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         is_active: student.is_active ?? true,
         paid_first_month: student.paid_first_month ?? false,
         is_summer_student: student.is_summer_student ?? false,
-        is_free_student: student.is_free_student ?? false
+        is_free_student: student.is_free_student ?? false,
+        is_new_student: student.is_new_student ?? false
       });
     } else {
       setFormData({
@@ -73,7 +75,8 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         is_active: true,
         paid_first_month: false,
         is_summer_student: false,
-        is_free_student: false
+        is_free_student: false,
+        is_new_student: false
       });
     }
     setError('');
@@ -111,7 +114,8 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         paid_first_month: formData.paid_first_month,
         paid_second_month: student?.paid_second_month ?? false,
         is_summer_student: formData.is_summer_student,
-        is_free_student: formData.is_free_student
+        is_free_student: formData.is_free_student,
+        is_new_student: formData.is_new_student
       };
 
       if (isEditing && student) {
@@ -326,6 +330,19 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
                 />
                 <label htmlFor="is_active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Active
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="is_new_student"
+                  id="is_new_student"
+                  checked={formData.is_new_student}
+                  onChange={handleChange}
+                  className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                />
+                <label htmlFor="is_new_student" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  New Student
                 </label>
               </div>
 

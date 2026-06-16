@@ -13,5 +13,6 @@ export interface StudentModel {
   paid_second_month: boolean;
   is_summer_student: boolean;
   is_free_student: boolean;
+  is_new_student: boolean;
   created_at: string;
 }
