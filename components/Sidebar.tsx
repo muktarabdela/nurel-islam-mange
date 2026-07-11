@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, Users, BookOpen, GraduationCap, UserCheck, BarChart3, Building, X, Menu, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, GraduationCap, UserCheck, BarChart3, Building, X, Menu, CheckSquare, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { useState, useEffect } from "react";
 
 // Define the navigation links in an array so it's easy to manage
@@ -14,8 +14,10 @@ const navItems = [
   { name: "Ustaz", path: "/ustaz", icon: BookOpen },
   { name: "Classes", path: "/classes", icon: GraduationCap },
   { name: "Attendance", path: "/attendance", icon: UserCheck },
-  { name: "Todos", path: "/todos", icon: CheckSquare },
-  { name: "Reports", path: "/reports", icon: BarChart3 },
+  {name :"Assessment",path: "/assessment", icon:CheckSquare },
+  { name: "Assessment Details", path: "/assessment-details", icon: FileText },
+  // { name: "Todos", path: "/todos", icon: CheckSquare },
+  // { name: "Reports", path: "/reports", icon: BarChart3 },
 ];
 
 export default function Sidebar() {

@@ -9,12 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, ChevronLeft, ChevronRight, ArrowUpDown, Filter } from "lucide-react";
 import { studentService } from "@/lib/servies/studentService";
 import { classService } from "@/lib/servies/classService";
 import { attendanceService } from "@/lib/servies/attendanceService";
 import { StudentModel } from "@/models/Student";
 import { ClassModel } from "@/models/Class";
+import { AssessmentModel, AssessmentType } from "@/models/Assessment";
+import { StudentMarkModel } from "@/models/StudentMark";
+import { useData } from "@/context/dataContext";
 
 export default function ClassDetailPage() {
   const params = useParams();
@@ -26,6 +30,13 @@ export default function ClassDetailPage() {
   const [studentStatsMap, setStudentStatsMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10);
+  const [selectedAssessmentFilter, setSelectedAssessmentFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'assessment'>('attendance');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const { assessments, studentMarks } = useData();
 
   useEffect(() => {
     async function loadData() {
@@ -61,12 +72,44 @@ export default function ClassDetailPage() {
     }
   }, [classId]);
 
+  // Get student marks for this class
+  const classStudentMarks = useMemo(() => {
+    return studentMarks.filter(mark => {
+      const assessment = assessments.find(a => a.id === mark.assessment_id);
+      return assessment?.class_id === classId;
+    });
+  }, [studentMarks, assessments, classId]);
+
   // Process students using the fetched stats
   const processedStudents = useMemo(() => {
     return students.map(student => {
       const stats = studentStatsMap[student.id] || { present: 0, absent: 0, late: 0, total: 0 };
       
       const presentPct = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+      
+      // Get student's assessment scores
+      const studentAssessmentData = classStudentMarks.filter(m => m.student_id === student.id);
+      
+      // Calculate overall assessment average
+      const validMarks = studentAssessmentData.filter(m => m.score !== null && !m.is_excused);
+      const totalAssessmentScore = validMarks.reduce((sum, m) => {
+        const assessment = assessments.find(a => a.id === m.assessment_id);
+        if (!assessment) return sum;
+        return sum + ((m.score || 0) / assessment.total_marks) * 100;
+      }, 0);
+      const overallAssessmentAvg = validMarks.length > 0 ? totalAssessmentScore / validMarks.length : 0;
+      
+      // Get score for specific assessment if filtered
+      let specificAssessmentScore = null;
+      if (selectedAssessmentFilter !== 'all') {
+        const specificMark = studentAssessmentData.find(m => m.assessment_id === selectedAssessmentFilter);
+        if (specificMark && specificMark.score !== null && !specificMark.is_excused) {
+          const assessment = assessments.find(a => a.id === selectedAssessmentFilter);
+          if (assessment) {
+            specificAssessmentScore = ((specificMark.score / assessment.total_marks) * 100);
+          }
+        }
+      }
       
       // LOGIC: 4 absent in last 20 OR 10 late in last 20
       const needsCommunication = (stats.absent >= 4) || (stats.late >= 10);
@@ -80,14 +123,139 @@ export default function ClassDetailPage() {
 
       return {
         ...student,
-        stats: { ...stats, presentPct, needsCommunication, reason }
+        stats: { ...stats, presentPct, needsCommunication, reason },
+        assessmentData: {
+          overallAverage: overallAssessmentAvg,
+          totalAssessments: validMarks.length,
+          specificScore: specificAssessmentScore
+        }
       };
     });
-  }, [students, studentStatsMap]);
+  }, [students, studentStatsMap, classStudentMarks, assessments, selectedAssessmentFilter]);
 
   // Separate the lists
   const attentionRequired = processedStudents.filter(s => s.stats.needsCommunication);
   const goodStanding = processedStudents.filter(s => !s.stats.needsCommunication && s.stats.total > 0);
+
+  // Sort students based on selected criteria
+  const sortedStudents = useMemo(() => {
+    const sorted = [...processedStudents].sort((a, b) => {
+      if (sortBy === 'name') {
+        return sortOrder === 'asc' 
+          ? a.full_name.localeCompare(b.full_name)
+          : b.full_name.localeCompare(a.full_name);
+      }
+      if (sortBy === 'attendance') {
+        return sortOrder === 'asc'
+          ? a.stats.presentPct - b.stats.presentPct
+          : b.stats.presentPct - a.stats.presentPct;
+      }
+      if (sortBy === 'assessment') {
+        const scoreA = selectedAssessmentFilter !== 'all' 
+          ? (a.assessmentData.specificScore ?? -1)
+          : a.assessmentData.overallAverage;
+        const scoreB = selectedAssessmentFilter !== 'all' 
+          ? (b.assessmentData.specificScore ?? -1)
+          : b.assessmentData.overallAverage;
+        return sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+      }
+      return 0;
+    });
+    return sorted;
+  }, [processedStudents, sortBy, sortOrder, selectedAssessmentFilter]);
+
+  // Get assessments for this class
+  const classAssessments = useMemo(() => {
+    return assessments.filter(a => a.class_id === classId);
+  }, [assessments, classId]);
+
+  // Calculate class assessment statistics
+  const classAssessmentStats = useMemo(() => {
+    const totalAssessments = classAssessments.length;
+    const totalMarks = classStudentMarks.filter(m => m.score !== null && !m.is_excused);
+    const averageScore = totalMarks.length > 0 
+      ? totalMarks.reduce((sum, m) => sum + (m.score || 0), 0) / totalMarks.length 
+      : 0;
+    
+    // Grade distribution
+    const gradeDistribution = totalMarks.reduce((acc, mark) => {
+      const assessment = assessments.find(a => a.id === mark.assessment_id);
+      if (!assessment || mark.score === null) return acc;
+      
+      const percentage = (mark.score / assessment.total_marks) * 100;
+      if (percentage >= 90) acc.A++;
+      else if (percentage >= 80) acc.B++;
+      else if (percentage >= 70) acc.C++;
+      else if (percentage >= 60) acc.D++;
+      else acc.F++;
+      
+      return acc;
+    }, { A: 0, B: 0, C: 0, D: 0, F: 0 });
+
+    return {
+      totalAssessments,
+      totalMarksRecorded: totalMarks.length,
+      averageScore,
+      gradeDistribution
+    };
+  }, [classAssessments, classStudentMarks, assessments]);
+
+  // Helper functions
+  const getAssessmentTypeLabel = (type: AssessmentType) => {
+    const labels: Record<AssessmentType, string> = {
+      exam: 'Exam',
+      test: 'Test',
+      assignment: 'Assignment',
+      quiz: 'Quiz',
+      project: 'Project'
+    };
+    return labels[type] || type;
+  };
+
+  const getGrade = (score: number, totalMarks: number) => {
+    const percentage = (score / totalMarks) * 100;
+    if (percentage >= 90) return { label: 'A', color: 'bg-green-100 text-green-800' };
+    if (percentage >= 80) return { label: 'B', color: 'bg-blue-100 text-blue-800' };
+    if (percentage >= 70) return { label: 'C', color: 'bg-yellow-100 text-yellow-800' };
+    if (percentage >= 60) return { label: 'D', color: 'bg-orange-100 text-orange-800' };
+    return { label: 'F', color: 'bg-red-100 text-red-800' };
+  };
+
+  // Pagination for students
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return sortedStudents.slice(startIndex, endIndex);
+  }, [sortedStudents, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(sortedStudents.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
+  const handleSortChange = (newSortBy: 'name' | 'attendance' | 'assessment') => {
+    if (sortBy === newSortBy) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('desc');
+    }
+    setCurrentPage(1);
+  };
+
+  const handleAssessmentFilterChange = (assessmentId: string) => {
+    setSelectedAssessmentFilter(assessmentId);
+    setCurrentPage(1);
+  };
 
   if (loading) {
     return (
@@ -129,36 +297,29 @@ export default function ClassDetailPage() {
           </div>
 
           {/* Class Info Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="font-h2 text-h2 text-on-surface">{classData.name}</h1>
-              <p className="font-body-md mt-1 text-muted-foreground">
-                Schedule: {classData.schedule || 'Not set'}
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <Card className="min-w-[150px]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Total Students
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{students.length}</div>
-                </CardContent>
-              </Card>
-              <Card className="min-w-[150px]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    Need Attention
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">{attentionRequired.length}</div>
-                </CardContent>
-              </Card>
+          <div className="flex flex-col gap-4">
+            <div className="md:flex md:items-center md:justify-between">
+              <div>
+                <h1 className="font-h2 text-h2 text-on-surface">{classData.name}</h1>
+                <p className="font-body-md mt-1 text-muted-foreground">
+                  Schedule: {classData.schedule || 'Not set'}
+                </p>
+              </div>
+              <div className="flex flex-col md:flex-row md:gap-4">
+               
+                <Card className="min-w-[150px]">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      Need Attention
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">{attentionRequired.length}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
             </div>
           </div>
 
@@ -221,15 +382,175 @@ export default function ClassDetailPage() {
             </div>
           )}
 
+          {/* Assessment Performance Section */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Award className="h-5 w-5 text-primary" />
+                Assessment Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Performance Statistics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-3xl font-bold text-primary">{classAssessmentStats.averageScore.toFixed(1)}%</p>
+                  <p className="text-xs font-medium text-primary/80 mt-1">Class Average</p>
+                </div>
+                <div className="text-center p-4 rounded-xl bg-muted border">
+                  <p className="text-3xl font-bold">{classAssessmentStats.totalMarksRecorded}</p>
+                  <p className="text-xs font-medium text-muted-foreground mt-1">Marks Recorded</p>
+                </div>
+                <div className="text-center p-4 rounded-xl bg-blue-50 border border-blue-100">
+                  <p className="text-3xl font-bold text-blue-600">{classAssessmentStats.totalAssessments}</p>
+                  <p className="text-xs font-medium text-blue-700 mt-1">Total Assessments</p>
+                </div>
+                <div className="text-center p-4 rounded-xl bg-green-50 border border-green-100">
+                  <p className="text-3xl font-bold text-green-600">{students.length}</p>
+                  <p className="text-xs font-medium text-green-700 mt-1">Students</p>
+                </div>
+              </div>
+
+              {/* Grade Distribution */}
+              {/* <div>
+                <h3 className="text-sm font-semibold mb-3">Grade Distribution</h3>
+                <div className="grid grid-cols-5 gap-2">
+                  {['A', 'B', 'C', 'D', 'F'].map(grade => {
+                    const count = classAssessmentStats.gradeDistribution[grade as keyof typeof classAssessmentStats.gradeDistribution];
+                    const colors = {
+                      A: 'bg-green-100 text-green-800 border-green-200',
+                      B: 'bg-blue-100 text-blue-800 border-blue-200',
+                      C: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                      D: 'bg-orange-100 text-orange-800 border-orange-200',
+                      F: 'bg-red-100 text-red-800 border-red-200'
+                    };
+                    return (
+                      <div key={grade} className={`text-center p-3 rounded-lg border ${colors[grade as keyof typeof colors]}`}>
+                        <p className="text-2xl font-bold">{count}</p>
+                        <p className="text-xs font-medium">Grade {grade}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div> */}
+
+              {/* Class Assessments Table */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3">Class Assessments</h3>
+                <div className="border rounded-xl overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead>Assessment</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Total Marks</TableHead>
+                        <TableHead>Students Graded</TableHead>
+                        <TableHead>Average Score</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {classAssessments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            No assessments found for this class
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        classAssessments.map((assessment) => {
+                          const assessmentMarks = classStudentMarks.filter(m => m.assessment_id === assessment.id);
+                          const gradedMarks = assessmentMarks.filter(m => m.score !== null && !m.is_excused);
+                          const avgScore = gradedMarks.length > 0 
+                            ? gradedMarks.reduce((sum, m) => sum + (m.score || 0), 0) / gradedMarks.length 
+                            : 0;
+
+                          return (
+                            <TableRow key={assessment.id} className="hover:bg-muted/20">
+                              <TableCell className="font-medium">{assessment.title}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{getAssessmentTypeLabel(assessment.type)}</Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {assessment.date || 'N/A'}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{assessment.total_marks}</TableCell>
+                              <TableCell className="text-muted-foreground">{gradedMarks.length}/{assessmentMarks.length}</TableCell>
+                              <TableCell className="font-medium">{avgScore.toFixed(1)}%</TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* All Students in Class */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="h-5 w-5 text-blue-600" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-blue-900">All Students</h2>
+                  <p className="text-sm text-muted-foreground">Complete list of students in this class.</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-blue-900">All Students</h2>
-                <p className="text-sm text-muted-foreground">Complete list of students in this class.</p>
+              
+              {/* Sort and Filter Controls */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Assessment Filter */}
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={selectedAssessmentFilter} onValueChange={handleAssessmentFilterChange}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="All Assessments" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Assessments</SelectItem>
+                      {classAssessments.map((assessment) => (
+                        <SelectItem key={assessment.id} value={assessment.id}>
+                          {assessment.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Sort Buttons */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Sort by:</span>
+                  <Button
+                    variant={sortBy === 'name' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleSortChange('name')}
+                    className="flex items-center gap-1"
+                  >
+                    Name
+                    {sortBy === 'name' && <ArrowUpDown className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    variant={sortBy === 'attendance' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleSortChange('attendance')}
+                    className="flex items-center gap-1"
+                  >
+                    Attendance
+                    {sortBy === 'attendance' && <ArrowUpDown className="h-3 w-3" />}
+                  </Button>
+                  <Button
+                    variant={sortBy === 'assessment' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleSortChange('assessment')}
+                    className="flex items-center gap-1"
+                  >
+                    {selectedAssessmentFilter !== 'all' ? 'Assessment Score' : 'Overall Avg'}
+                    {sortBy === 'assessment' && <ArrowUpDown className="h-3 w-3" />}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -244,11 +565,12 @@ export default function ClassDetailPage() {
                       <TableHead className="text-center">Absent</TableHead>
                       <TableHead className="text-center">Late</TableHead>
                       <TableHead className="text-center">Attendance Rate</TableHead>
+                      <TableHead className="text-center">Assessment Score</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {processedStudents.length > 0 ? (
-                      processedStudents.map((s) => (
+                    {paginatedStudents.length > 0 ? (
+                      paginatedStudents.map((s) => (
                         <TableRow key={s.id} className="hover:bg-blue-50/50">
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
@@ -279,11 +601,19 @@ export default function ClassDetailPage() {
                           <TableCell className="text-center">
                             <span className="font-semibold">{s.stats.presentPct.toFixed(1)}%</span>
                           </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-semibold">
+                              {selectedAssessmentFilter !== 'all' 
+                                ? (s.assessmentData.specificScore !== null ? s.assessmentData.specificScore.toFixed(1) + '%' : 'N/A')
+                                : (s.assessmentData.totalAssessments > 0 ? s.assessmentData.overallAverage.toFixed(1) + '%' : 'N/A')
+                              }
+                            </span>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                           No students found in this class.
                         </TableCell>
                       </TableRow>
@@ -292,6 +622,68 @@ export default function ClassDetailPage() {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, sortedStudents.length)} of {sortedStudents.length} students
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(page)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        );
+                      } else if (
+                        page === currentPage - 2 ||
+                        page === currentPage + 2
+                      ) {
+                        return (
+                          <span key={page} className="px-2 text-muted-foreground">
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
         </main>

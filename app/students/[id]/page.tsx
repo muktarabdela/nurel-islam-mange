@@ -9,12 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User, Edit, Mail, Calendar, CheckCircle, X, BookOpen, Plus, Info, CalendarDays, ChevronLeft, ChevronRight, Activity } from "lucide-react";
+import { User, Edit, Mail, Calendar, CheckCircle, X, BookOpen, Plus, Info, CalendarDays, ChevronLeft, ChevronRight, Activity, TrendingUp, TrendingDown, Award } from "lucide-react";
 import { useData } from "@/context/dataContext";
 import { formatEthiopianDate, getCurrentEthiopianDate, EthiopianDateComponents } from "@/lib/utils/ethiopian-date";
 import { useState, useMemo, useEffect } from "react";
 import { attendanceService } from "@/lib/servies/attendanceService";
 import { studentService } from "@/lib/servies/studentService";
+import { AssessmentModel, AssessmentType } from "@/models/Assessment";
+import { StudentMarkModel } from "@/models/StudentMark";
 
 const ETHIOPIAN_MONTHS = [
   "Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yekatit",
@@ -33,7 +35,7 @@ export default function StudentProfilePage() {
   const params = useParams();
   const studentId = params.id as string;
 
-  const { students, attendance, classes, behaviorNotes, loading } = useData();
+  const { students, attendance, classes, behaviorNotes, loading, assessments, studentMarks } = useData();
   
   const [localAttendance, setLocalAttendance] = useState<any[]>([]);
   const [fetchingLocal, setFetchingLocal] = useState(false);
@@ -77,6 +79,96 @@ const studentAttendance = localAttendance;
   ).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
+
+  // Get student's assessment marks
+  const studentAssessmentMarks = useMemo(() => {
+    return studentMarks.filter(mark => 
+      mark.student_id?.toString().trim() === studentId?.toString().trim()
+    );
+  }, [studentMarks, studentId]);
+
+  // Calculate assessment performance statistics
+  const assessmentStats = useMemo(() => {
+    const validMarks = studentAssessmentMarks.filter(mark => mark.score !== null && !mark.is_excused);
+    const totalAssessments = studentAssessmentMarks.length;
+    const completedAssessments = validMarks.length;
+    const totalScore = validMarks.reduce((sum, mark) => sum + (mark.score || 0), 0);
+    
+    // Calculate average percentage
+    let averagePercentage = 0;
+    if (completedAssessments > 0) {
+      const totalPossible = validMarks.reduce((sum, mark) => {
+        const assessment = assessments.find(a => a.id === mark.assessment_id);
+        return sum + (assessment?.total_marks || 0);
+      }, 0);
+      averagePercentage = totalPossible > 0 ? (totalScore / totalPossible) * 100 : 0;
+    }
+
+    // Get highest and lowest scores
+    const scores = validMarks.map(m => m.score || 0);
+    const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
+    const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
+
+    // Calculate grade distribution
+    const gradeDistribution = validMarks.reduce((acc, mark) => {
+      const assessment = assessments.find(a => a.id === mark.assessment_id);
+      if (!assessment || mark.score === null) return acc;
+      
+      const percentage = (mark.score / assessment.total_marks) * 100;
+      if (percentage >= 90) acc.A++;
+      else if (percentage >= 80) acc.B++;
+      else if (percentage >= 70) acc.C++;
+      else if (percentage >= 60) acc.D++;
+      else acc.F++;
+      
+      return acc;
+    }, { A: 0, B: 0, C: 0, D: 0, F: 0 });
+
+    return {
+      totalAssessments,
+      completedAssessments,
+      averagePercentage,
+      highestScore,
+      lowestScore,
+      gradeDistribution
+    };
+  }, [studentAssessmentMarks, assessments]);
+
+  // Helper functions for assessment display
+  const getAssessmentTypeLabel = (type: AssessmentType) => {
+    const labels: Record<AssessmentType, string> = {
+      exam: 'Exam',
+      test: 'Test',
+      assignment: 'Assignment',
+      quiz: 'Quiz',
+      project: 'Project'
+    };
+    return labels[type] || type;
+  };
+
+  const getGrade = (score: number, totalMarks: number) => {
+    const percentage = (score / totalMarks) * 100;
+    if (percentage >= 90) return { label: 'A', color: 'bg-green-100 text-green-800' };
+    if (percentage >= 80) return { label: 'B', color: 'bg-blue-100 text-blue-800' };
+    if (percentage >= 70) return { label: 'C', color: 'bg-yellow-100 text-yellow-800' };
+    if (percentage >= 60) return { label: 'D', color: 'bg-orange-100 text-orange-800' };
+    return { label: 'F', color: 'bg-red-100 text-red-800' };
+  };
+
+  const getPerformanceTrend = () => {
+    const sortedMarks = [...studentAssessmentMarks]
+      .filter(m => m.score !== null && !m.is_excused)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    
+    if (sortedMarks.length < 2) return null;
+    
+    const recent = sortedMarks[sortedMarks.length - 1]?.score || 0;
+    const previous = sortedMarks[sortedMarks.length - 2]?.score || 0;
+    
+    if (recent > previous) return <TrendingUp className="h-4 w-4 text-green-600" />;
+    if (recent < previous) return <TrendingDown className="h-4 w-4 text-red-600" />;
+    return null;
+  };
   
   // FIX: Using Number() to explicitly prevent String vs Number strict equality failures
   const monthlyAttendance = useMemo(() => {
@@ -463,6 +555,143 @@ const studentAttendance = localAttendance;
                     </div>
                   </div>
 
+                </CardContent>
+              </Card>
+
+              {/* Section: Assessment Performance */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Award className="h-5 w-5 text-primary" />
+                    Assessment Performance
+                  </CardTitle>
+                  {getPerformanceTrend()}
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Performance Statistics */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 rounded-xl bg-primary/5 border border-primary/10">
+                      <p className="text-3xl font-bold text-primary">{assessmentStats.averagePercentage.toFixed(1)}%</p>
+                      <p className="text-xs font-medium text-primary/80 mt-1">Average Score</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-muted border">
+                      <p className="text-3xl font-bold">{assessmentStats.completedAssessments}/{assessmentStats.totalAssessments}</p>
+                      <p className="text-xs font-medium text-muted-foreground mt-1">Completed</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-green-50 border border-green-100">
+                      <p className="text-3xl font-bold text-green-600">{assessmentStats.highestScore}</p>
+                      <p className="text-xs font-medium text-green-700 mt-1">Highest Score</p>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-red-50 border border-red-100">
+                      <p className="text-3xl font-bold text-red-600">{assessmentStats.lowestScore}</p>
+                      <p className="text-xs font-medium text-red-700 mt-1">Lowest Score</p>
+                    </div>
+                  </div>
+
+                  {/* Grade Distribution */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">Grade Distribution</h3>
+                    <div className="grid grid-cols-5 gap-2">
+                      {['A', 'B', 'C', 'D', 'F'].map(grade => {
+                    const count = assessmentStats.gradeDistribution[grade as keyof typeof assessmentStats.gradeDistribution];
+                    const colors = {
+                      A: 'bg-green-100 text-green-800 border-green-200',
+                      B: 'bg-blue-100 text-blue-800 border-blue-200',
+                      C: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                      D: 'bg-orange-100 text-orange-800 border-orange-200',
+                      F: 'bg-red-100 text-red-800 border-red-200'
+                    };
+                    return (
+                      <div key={grade} className={`text-center p-3 rounded-lg border ${colors[grade as keyof typeof colors]}`}>
+                        <p className="text-2xl font-bold">{count}</p>
+                        <p className="text-xs font-medium">Grade {grade}</p>
+                      </div>
+                    );
+                  })}
+                    </div>
+                  </div>
+
+                  {/* Detailed Assessment Table */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">Assessment Details</h3>
+                    <div className="border rounded-xl overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead>Assessment</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Class</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Score</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead>Percentage</TableHead>
+                            <TableHead>Grade</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Remarks</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {studentAssessmentMarks.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                                No assessment records found for this student
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            studentAssessmentMarks.map((mark) => {
+                              const assessment = assessments.find(a => a.id === mark.assessment_id);
+                              if (!assessment) return null;
+
+                              const assessmentClass = classes.find(c => c.id === assessment.class_id);
+                              const percentage = mark.score !== null 
+                                ? ((mark.score / assessment.total_marks) * 100).toFixed(1) 
+                                : 'N/A';
+                              const grade = mark.score !== null 
+                                ? getGrade(mark.score, assessment.total_marks) 
+                                : { label: 'N/A', color: 'bg-gray-100 text-gray-800' };
+
+                              return (
+                                <TableRow key={mark.id} className="hover:bg-muted/20">
+                                  <TableCell className="font-medium">{assessment.title}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline">{getAssessmentTypeLabel(assessment.type)}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {assessmentClass?.name || 'Unknown Class'}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {assessment.date || 'N/A'}
+                                  </TableCell>
+                                  <TableCell className="font-medium">{mark.score ?? 'N/A'}</TableCell>
+                                  <TableCell className="text-muted-foreground">{assessment.total_marks}</TableCell>
+                                  <TableCell className="font-medium">{percentage}%</TableCell>
+                                  <TableCell>
+                                    <Badge className={grade.color}>{grade.label}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {mark.is_excused ? (
+                                      <Badge variant="outline" className="bg-yellow-50 text-yellow-800">
+                                        Excused
+                                      </Badge>
+                                    ) : mark.score === null ? (
+                                      <Badge variant="outline" className="bg-gray-50 text-gray-800">
+                                        Not Graded
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-green-100 text-green-800">Completed</Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm max-w-xs truncate">
+                                    {mark.remarks || '-'}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
