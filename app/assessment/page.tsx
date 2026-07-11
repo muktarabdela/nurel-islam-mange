@@ -201,7 +201,7 @@ export default function AssessmentPage() {
         <Sidebar />
         <div className="md:ml-[280px] flex-1 flex flex-col min-h-screen overflow-hidden">
           <TopNavBar />
-          <main className="flex-1 p-8 pb-xxl max-w-[1440px] mx-auto w-full overflow-y-auto">
+          <main className="flex-1 p-4 md:p-8 pb-xxl max-w-[1440px] mx-auto w-full overflow-y-auto">
             <div className="flex items-center justify-center h-64">
               <div className="text-muted-foreground">Loading assessment data...</div>
             </div>
@@ -217,7 +217,7 @@ export default function AssessmentPage() {
         <Sidebar />
         <div className="md:ml-[280px] flex-1 flex flex-col min-h-screen overflow-hidden">
           <TopNavBar />
-          <main className="flex-1 p-8 pb-xxl max-w-[1440px] mx-auto w-full overflow-y-auto">
+          <main className="flex-1 p-4 md:p-8 pb-xxl max-w-[1440px] mx-auto w-full overflow-y-auto">
             <div className="flex items-center justify-center h-64">
               <div className="text-red-600">Error: {dataError}</div>
             </div>
@@ -232,8 +232,8 @@ export default function AssessmentPage() {
       <Sidebar />
       <div className="md:ml-[280px] flex-1 flex flex-col min-h-screen overflow-hidden">
         <TopNavBar />
-        <main className="flex-1 p-8 pb-xxl max-w-[1440px] mx-auto w-full overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
+        <main className="flex-1 p-4 md:p-8 pb-xxl max-w-[1440px] mx-auto w-full overflow-y-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
               <h1 className="text-3xl font-bold">Assessment Management</h1>
               <p className="text-muted-foreground mt-1">Create and manage student assessments</p>
@@ -271,7 +271,7 @@ export default function AssessmentPage() {
                   key={assessment.id}
                   className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold">{assessment.title}</h3>
@@ -289,7 +289,7 @@ export default function AssessmentPage() {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                         <div>
                           <span className="font-medium">Class:</span> {getClassName(assessment.class_id)}
                         </div>
@@ -313,7 +313,7 @@ export default function AssessmentPage() {
                       )}
                     </div>
                     
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex flex-row sm:flex-col gap-2 sm:ml-4">
                       <Button
                         size="sm"
                         variant="outline"
@@ -351,7 +351,7 @@ export default function AssessmentPage() {
         }
         setIsModalOpen(open);
       }}>
-        <DialogContent className="sm:max-w-2xl h-[calc(100vh-100px)] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-w-[95vw] h-[calc(100vh-100px)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditing ? 'Edit Assessment' : 'Create New Assessment'}</DialogTitle>
             <DialogDescription>
