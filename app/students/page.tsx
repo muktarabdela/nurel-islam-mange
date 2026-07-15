@@ -154,109 +154,104 @@ export default function StudentsPage() {
             <div className="max-w-[1440px] mx-auto flex flex-col gap-8">
               
               {/* Page Header & Actions */}
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-                <div>
+              <div className="flex flex-col xl:flex-row justify-between items-start gap-6">
+                {/* Header Section */}
+                <div className="flex-1">
                   <h1 className="font-h1 text-h1 text-on-background mb-2">Students Management</h1>
                   <p className="font-body-md text-on-surface-variant">
                     Manage enrollments, assign classes, and monitor student status.
                   </p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                  {/* Class Selector */}
-                  <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
-                    <label className="text-sm font-medium text-muted-foreground" htmlFor="class-select">
-                      Class
-                    </label>
-                    <Select value={selectedClass} onValueChange={setSelectedClass}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Classes</SelectItem>
-                        {classes.map((classItem) => (
-                          <SelectItem key={classItem.id} value={classItem.id}>
-                            {classItem.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                {/* Filters & Actions Section */}
+                <div className="w-full xl:w-auto">
+                  {/* Filters Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 mb-4">
+                    {/* Class Selector */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium text-muted-foreground" htmlFor="class-select">
+                        Class
+                      </label>
+                      <Select value={selectedClass} onValueChange={setSelectedClass}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a class" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Classes</SelectItem>
+                          {classes.map((classItem) => (
+                            <SelectItem key={classItem.id} value={classItem.id}>
+                              {classItem.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Ustaz Selector */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium text-muted-foreground" htmlFor="ustaz-select">
+                        Ustaz
+                      </label>
+                      <Select value={selectedUstaz} onValueChange={setSelectedUstaz}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an ustaz" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Ustaz</SelectItem>
+                          {ustaz.map((ustazItem) => (
+                            <SelectItem key={ustazItem.id} value={ustazItem.id}>
+                              {ustazItem.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Student Type Filter */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-medium text-muted-foreground" htmlFor="student-type-filter">
+                        Student Type
+                      </label>
+                      <Select value={filterStudentType} onValueChange={(value: 'all' | 'summer' | 'free' | 'regular' | 'inactive' | 'new' | 'summer-unpaid') => setFilterStudentType(value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Filter by type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Students</SelectItem>
+                          <SelectItem value="summer">Summer Students Only</SelectItem>
+                          <SelectItem value="free">Free Students Only</SelectItem>
+                          <SelectItem value="regular">Regular Students</SelectItem>
+                          <SelectItem value="inactive">Inactive Students</SelectItem>
+                          <SelectItem value="new">New Students</SelectItem>
+                          <SelectItem value="summer-unpaid"> (Unpaid 2nd Month)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  {/* Ustaz Selector */}
-                  <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
-                    <label className="text-sm font-medium text-muted-foreground" htmlFor="ustaz-select">
-                      Ustaz
-                    </label>
-                    <Select value={selectedUstaz} onValueChange={setSelectedUstaz}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an ustaz" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Ustaz</SelectItem>
-                        {ustaz.map((ustazItem) => (
-                          <SelectItem key={ustazItem.id} value={ustazItem.id}>
-                            {ustazItem.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Student Type Filter */}
-                  <div className="flex flex-col gap-2 flex-1 sm:min-w-[200px]">
-                    <label className="text-sm font-medium text-muted-foreground" htmlFor="student-type-filter">
-                      Student Type
-                    </label>
-                    <Select value={filterStudentType} onValueChange={(value: 'all' | 'summer' | 'free' | 'regular' | 'inactive' | 'new' | 'summer-unpaid') => setFilterStudentType(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Filter by type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Students</SelectItem>
-                        <SelectItem value="summer">Summer Students Only</SelectItem>
-                        <SelectItem value="free">Free Students Only</SelectItem>
-                        <SelectItem value="regular">Regular Students</SelectItem>
-                        <SelectItem value="inactive">Inactive Students</SelectItem>
-                        <SelectItem value="new">New Students</SelectItem>
-                        <SelectItem value="summer-unpaid"> (Unpaid 2nd Month)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Add Student Button */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-muted-foreground invisible">Add</label>
-                    <Button onClick={handleAddStudent} className="flex items-center gap-2">
+                  {/* Action Buttons Row */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button onClick={handleAddStudent} className="flex items-center gap-2 flex-1 sm:flex-none">
                       <UserPlus className="h-4 w-4" />
                       Add Student
                     </Button>
-                  </div>
-
-                  {/* Export PDF Button */}
-                  {/* <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-muted-foreground invisible">Export</label>
                     <Button 
                       onClick={() => setIsExportModalOpen(true)} 
                       variant="outline" 
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 flex-1 sm:flex-none"
                     >
                       <Download className="h-4 w-4" />
                       Export PDF
                     </Button>
-                  </div> */}
-
-                  {/* Download Contacts Button */}
-                  {/* <div className="flex flex-col gap-2">
-                    <label className="text-sm font-medium text-muted-foreground invisible">Contacts</label>
                     <Button 
                       onClick={() => setIsContactExportModalOpen(true)} 
                       variant="outline" 
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 flex-1 sm:flex-none"
                     >
                       <Phone className="h-4 w-4" />
                       Download Contacts
                     </Button>
-                  </div> */}
+                  </div>
                 </div>
               </div>
 
