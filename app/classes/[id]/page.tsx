@@ -33,7 +33,7 @@ export default function ClassDetailPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
   const [selectedAssessmentFilter, setSelectedAssessmentFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'assessment'>('attendance');
+  const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'assessment' | 'totalMarks'>('attendance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const { assessments, studentMarks } = useData();
@@ -101,15 +101,20 @@ export default function ClassDetailPage() {
       
       // Get score for specific assessment if filtered
       let specificAssessmentScore = null;
+      let specificScoreActual = null;
       if (selectedAssessmentFilter !== 'all') {
         const specificMark = studentAssessmentData.find(m => m.assessment_id === selectedAssessmentFilter);
         if (specificMark && specificMark.score !== null && !specificMark.is_excused) {
           const assessment = assessments.find(a => a.id === selectedAssessmentFilter);
           if (assessment) {
             specificAssessmentScore = ((specificMark.score / assessment.total_marks) * 100);
+            specificScoreActual = specificMark.score;
           }
         }
       }
+
+      // Calculate total marks sum for all assessments
+      const totalMarksSum = validMarks.reduce((sum, m) => sum + (m.score || 0), 0);
       
       // LOGIC: 4 absent in last 20 OR 10 late in last 20
       const needsCommunication = (stats.absent >= 4) || (stats.late >= 10);
@@ -127,7 +132,9 @@ export default function ClassDetailPage() {
         assessmentData: {
           overallAverage: overallAssessmentAvg,
           totalAssessments: validMarks.length,
-          specificScore: specificAssessmentScore
+          specificScore: specificAssessmentScore,
+          specificScoreActual: specificScoreActual,
+          totalMarksSum: totalMarksSum
         }
       };
     });
@@ -158,6 +165,11 @@ export default function ClassDetailPage() {
           ? (b.assessmentData.specificScore ?? -1)
           : b.assessmentData.overallAverage;
         return sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+      }
+      if (sortBy === 'totalMarks') {
+        const totalA = a.assessmentData.totalMarksSum ?? -1;
+        const totalB = b.assessmentData.totalMarksSum ?? -1;
+        return sortOrder === 'asc' ? totalA - totalB : totalB - totalA;
       }
       return 0;
     });
@@ -242,7 +254,7 @@ export default function ClassDetailPage() {
     setCurrentPage(prev => Math.min(prev + 1, totalPages));
   };
 
-  const handleSortChange = (newSortBy: 'name' | 'attendance' | 'assessment') => {
+  const handleSortChange = (newSortBy: 'name' | 'attendance' | 'assessment' | 'totalMarks') => {
     if (sortBy === newSortBy) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
@@ -520,35 +532,28 @@ export default function ClassDetailPage() {
                   </Select>
                 </div>
                 
-                {/* Sort Buttons */}
+                {/* Sort Dropdown */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Sort by:</span>
+                  <Select value={sortBy} onValueChange={(value: any) => handleSortChange(value)}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="attendance">Attendance</SelectItem>
+                      <SelectItem value="assessment">{selectedAssessmentFilter !== 'all' ? 'Assessment Score' : 'Overall Avg'}</SelectItem>
+                      <SelectItem value="totalMarks">Total Marks</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button
-                    variant={sortBy === 'name' ? 'default' : 'outline'}
+                    variant="outline"
                     size="sm"
-                    onClick={() => handleSortChange('name')}
+                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                     className="flex items-center gap-1"
                   >
-                    Name
-                    {sortBy === 'name' && <ArrowUpDown className="h-3 w-3" />}
-                  </Button>
-                  <Button
-                    variant={sortBy === 'attendance' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleSortChange('attendance')}
-                    className="flex items-center gap-1"
-                  >
-                    Attendance
-                    {sortBy === 'attendance' && <ArrowUpDown className="h-3 w-3" />}
-                  </Button>
-                  <Button
-                    variant={sortBy === 'assessment' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleSortChange('assessment')}
-                    className="flex items-center gap-1"
-                  >
-                    {selectedAssessmentFilter !== 'all' ? 'Assessment Score' : 'Overall Avg'}
-                    {sortBy === 'assessment' && <ArrowUpDown className="h-3 w-3" />}
+                    <ArrowUpDown className="h-3 w-3" />
+                    {sortOrder === 'asc' ? 'Asc' : 'Desc'}
                   </Button>
                 </div>
               </div>
@@ -566,6 +571,7 @@ export default function ClassDetailPage() {
                       <TableHead className="text-center">Late</TableHead>
                       <TableHead className="text-center">Attendance Rate</TableHead>
                       <TableHead className="text-center">Assessment Score</TableHead>
+                      <TableHead className="text-center">Total Marks</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -604,16 +610,21 @@ export default function ClassDetailPage() {
                           <TableCell className="text-center">
                             <span className="font-semibold">
                               {selectedAssessmentFilter !== 'all' 
-                                ? (s.assessmentData.specificScore !== null ? s.assessmentData.specificScore.toFixed(1) + '%' : 'N/A')
+                                ? (s.assessmentData.specificScoreActual !== null ? `${s.assessmentData.specificScoreActual}/${assessments.find(a => a.id === selectedAssessmentFilter)?.total_marks || 'N/A'}` : 'N/A')
                                 : (s.assessmentData.totalAssessments > 0 ? s.assessmentData.overallAverage.toFixed(1) + '%' : 'N/A')
                               }
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-semibold">
+                              {s.assessmentData.totalAssessments > 0 ? s.assessmentData.totalMarksSum.toFixed(1) : 'N/A'}
                             </span>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                           No students found in this class.
                         </TableCell>
                       </TableRow>
