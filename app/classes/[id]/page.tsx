@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, ChevronLeft, ChevronRight, ArrowUpDown, Filter } from "lucide-react";
+import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, ChevronLeft, ChevronRight, ArrowUpDown, Filter, Download } from "lucide-react";
 import { studentService } from "@/lib/servies/studentService";
 import { classService } from "@/lib/servies/classService";
 import { attendanceService } from "@/lib/servies/attendanceService";
@@ -19,6 +19,7 @@ import { ClassModel } from "@/models/Class";
 import { AssessmentModel, AssessmentType } from "@/models/Assessment";
 import { StudentMarkModel } from "@/models/StudentMark";
 import { useData } from "@/context/dataContext";
+import { StudentMarkExport } from "@/components/StudentMarkExport";
 
 export default function ClassDetailPage() {
   const params = useParams();
@@ -35,6 +36,7 @@ export default function ClassDetailPage() {
   const [selectedAssessmentFilter, setSelectedAssessmentFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'assessment' | 'totalMarks'>('attendance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const { assessments, studentMarks } = useData();
 
@@ -292,21 +294,22 @@ export default function ClassDetailPage() {
   }
 
   return (
-    <div className="flex bg-background min-h-screen font-body-md antialiased text-on-background">
-      <Sidebar />
+    <>
+      <div className="flex bg-background min-h-screen font-body-md antialiased text-on-background">
+        <Sidebar />
 
-      <div className="md:ml-[280px] flex-1 flex flex-col min-h-screen overflow-hidden">
-        <TopNavBar />
+        <div className="md:ml-[280px] flex-1 flex flex-col min-h-screen overflow-hidden">
+          <TopNavBar />
 
-        <main className="flex-1 p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-8 overflow-y-auto">
-          
-          {/* Page Header */}
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Classes
-            </Button>
-          </div>
+          <main className="flex-1 p-8 max-w-[1440px] mx-auto w-full flex flex-col gap-8 overflow-y-auto">
+            
+            {/* Page Header */}
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Classes
+              </Button>
+            </div>
 
           {/* Class Info Header */}
           <div className="flex flex-col gap-4">
@@ -318,6 +321,14 @@ export default function ClassDetailPage() {
                 </p>
               </div>
               <div className="flex flex-col md:flex-row md:gap-4">
+                <Button 
+                  onClick={() => setIsExportModalOpen(true)} 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export Marks PDF
+                </Button>
                
                 <Card className="min-w-[150px]">
                   <CardHeader className="pb-2">
@@ -700,5 +711,16 @@ export default function ClassDetailPage() {
         </main>
       </div>
     </div>
+
+    {/* Student Mark Export Modal */}
+    {classData && (
+      <StudentMarkExport 
+        isOpen={isExportModalOpen} 
+        onClose={() => setIsExportModalOpen(false)}
+        classId={classId}
+        className={classData.name}
+      />
+    )}
+    </>
   );
 }
