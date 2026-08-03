@@ -413,12 +413,8 @@ export default function AssessmentDetailsPage() {
                         <TableRow>
                           <TableHead>Student Name</TableHead>
                           <TableHead>Class</TableHead>
-                          <TableHead>Assessments</TableHead>
-                          <TableHead>Average Score</TableHead>
-                          <TableHead>Highest</TableHead>
-                          <TableHead>Lowest</TableHead>
-                          <TableHead>Trend</TableHead>
-                          <TableHead>Performance</TableHead>
+                          <TableHead>Assessment Score</TableHead>
+                          <TableHead>Total Marks</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -426,19 +422,40 @@ export default function AssessmentDetailsPage() {
                           const filteredByStudent = selectedStudent === 'all' || selectedStudent === summary.student.id;
                           if (!filteredByStudent) return null;
 
-                          const grade = getGrade(summary.averageScore, 100);
+                          // Get assessment score and total marks
+                          let assessmentScore = 'N/A';
+                          let totalMarks = 'N/A';
+
+                          if (selectedAssessment !== 'all') {
+                            // Show score for specific assessment
+                            const mark = summary.marks.find(m => m.assessment_id === selectedAssessment);
+                            const assessment = assessments.find(a => a.id === selectedAssessment);
+                            if (mark && mark.score !== null && !mark.is_excused) {
+                              assessmentScore = `${mark.score}/${assessment?.total_marks || 'N/A'}`;
+                              totalMarks = assessment?.total_marks?.toString() || 'N/A';
+                            }
+                          } else {
+                            // Show overall average if all assessments selected
+                            if (summary.totalAssessments > 0) {
+                              assessmentScore = `${summary.averageScore.toFixed(1)}%`;
+                              // Calculate total marks from all assessments
+                              const totalAssessmentMarks = summary.marks.reduce((sum, mark) => {
+                                const assessment = assessments.find(a => a.id === mark.assessment_id);
+                                return sum + (assessment?.total_marks || 0);
+                              }, 0);
+                              totalMarks = totalAssessmentMarks > 0 ? totalAssessmentMarks.toFixed(1) : 'N/A';
+                            }
+                          }
                           
                           return (
                             <TableRow key={summary.student.id}>
                               <TableCell className="font-medium">{summary.student.full_name}</TableCell>
                               <TableCell>{getClassName(summary.student.class_id || '')}</TableCell>
-                              <TableCell>{summary.totalAssessments}</TableCell>
-                              <TableCell>{summary.averageScore.toFixed(1)}%</TableCell>
-                              <TableCell>{summary.highestScore.toFixed(1)}</TableCell>
-                              <TableCell>{summary.lowestScore.toFixed(1)}</TableCell>
-                              <TableCell>{getPerformanceTrend(summary)}</TableCell>
-                              <TableCell>
-                                <Badge className={grade.color}>{grade.label}</Badge>
+                              <TableCell className="text-center">
+                                <span className="font-semibold">{assessmentScore}</span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-semibold">{totalMarks}</span>
                               </TableCell>
                             </TableRow>
                           );
