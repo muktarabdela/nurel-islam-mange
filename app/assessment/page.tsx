@@ -6,7 +6,7 @@ import { useData } from '@/context/dataContext';
 import { assessmentService } from '@/lib/servies/assessmentService';
 import { AssessmentModel, AssessmentType } from '@/models/Assessment';
 import { ClassModel } from '@/models/Class';
-import { isAuthenticated } from '@/lib/auth';
+import { isAuthenticated, getUstazFromSession, isAdmin } from '@/lib/auth';
 import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
 import { Button } from "@/components/ui/button";
@@ -21,18 +21,42 @@ import {
 
 export default function AssessmentPage() {
   const router = useRouter();
-  const { classes, assessments, refreshData, loading, error: dataError } = useData();
+  const { classes, assessments, refreshData, loading, error: dataError, ustaz } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<AssessmentModel | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [filteredAssessments, setFilteredAssessments] = useState<AssessmentModel[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
       router.push('/login');
     }
   }, [router]);
+
+  // Filter assessments based on user role
+  useEffect(() => {
+    if (isAdmin()) {
+      // Admins see all assessments
+      setFilteredAssessments(assessments);
+    } else {
+      const currentUstaz = getUstazFromSession();
+      if (currentUstaz) {
+        // Ustaz sees assessments assigned to them OR those with no specific ustaz (null)
+        setFilteredAssessments(
+          assessments.filter(
+            (assessment) => 
+              assessment.ustaz_id === currentUstaz.id || 
+              assessment.ustaz_id === null
+          )
+        );
+      } else {
+        // If no ustaz session, show nothing
+        setFilteredAssessments([]);
+      }
+    }
+  }, [assessments]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -41,7 +65,8 @@ export default function AssessmentPage() {
     class_id: '',
     description: '',
     date: '',
-    ethiopian_date: ''
+    ethiopian_date: '',
+    ustaz_id: ''
   });
 
   const isEditing = !!editingAssessment;
@@ -55,7 +80,8 @@ export default function AssessmentPage() {
         class_id: editingAssessment.class_id,
         description: editingAssessment.description || '',
         date: editingAssessment.date || '',
-        ethiopian_date: editingAssessment.ethiopian_date || ''
+        ethiopian_date: editingAssessment.ethiopian_date || '',
+        ustaz_id: editingAssessment.ustaz_id || ''
       });
     } else {
       setFormData({
@@ -65,7 +91,8 @@ export default function AssessmentPage() {
         class_id: '',
         description: '',
         date: '',
-        ethiopian_date: ''
+        ethiopian_date: '',
+        ustaz_id: ''
       });
     }
     setError('');
@@ -98,7 +125,8 @@ export default function AssessmentPage() {
           class_id: formData.class_id,
           description: formData.description.trim() || null,
           date: formData.date || null,
-          ethiopian_date: formData.ethiopian_date.trim() || null
+          ethiopian_date: formData.ethiopian_date.trim() || null,
+          ustaz_id: formData.ustaz_id || null
         };
 
         await assessmentService.update(editingAssessment.id, updateData);
@@ -114,22 +142,25 @@ export default function AssessmentPage() {
           date: formData.date || null,
           ethiopian_date: formData.ethiopian_date.trim() || null,
           created_by: '00000000-0000-0000-0000-000000000000', // Placeholder UUID until auth is implemented
-          is_published: false
+          is_published: false,
+          ustaz_id: formData.ustaz_id || null
         };
 
         await assessmentService.create(submitData);
         setSuccess('Assessment created successfully!');
       }
 
-      setFormData({
+      setFormData(prevFormData => ({
+        ...prevFormData,
         title: '',
         type: 'exam',
         total_marks: '',
         class_id: '',
         description: '',
         date: '',
-        ethiopian_date: ''
-      });
+        ethiopian_date: '',
+        ustaz_id: ''
+      }));
       setEditingAssessment(null);
       setIsModalOpen(false);
       
@@ -193,6 +224,12 @@ export default function AssessmentPage() {
   const getClassName = (classId: string) => {
     const cls = classes.find(c => c.id === classId);
     return cls?.name || 'Unknown Class';
+  };
+
+  const getUstazName = (ustazId: string | null) => {
+    if (!ustazId) return 'All Ustazs';
+    const u = ustaz.find(u => u.id === ustazId);
+    return u?.full_name || 'Unknown Ustaz';
   };
 
   if (loading) {
@@ -260,13 +297,13 @@ export default function AssessmentPage() {
         <div className="p-6">
           <h2 className="text-xl font-semibold mb-4">All Assessments</h2>
           
-          {assessments.length === 0 ? (
+          {filteredAssessments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No assessments created yet. Click "Create Assessment" to get started.
             </div>
           ) : (
             <div className="space-y-4">
-              {assessments.map((assessment) => (
+              {filteredAssessments.map((assessment) => (
                 <div
                   key={assessment.id}
                   className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -289,9 +326,12 @@ export default function AssessmentPage() {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-sm text-muted-foreground">
                         <div>
                           <span className="font-medium">Class:</span> {getClassName(assessment.class_id)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Assigned Ustaz:</span> {getUstazName(assessment.ustaz_id)}
                         </div>
                         <div>
                           <span className="font-medium">Total Marks:</span> {assessment.total_marks}
@@ -404,6 +444,27 @@ export default function AssessmentPage() {
                   {classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Ustaz Selection */}
+              <div className="grid gap-2">
+                <label htmlFor="ustaz_id" className="text-sm font-medium">
+                  Assign to Ustaz
+                </label>
+                <select
+                  id="ustaz_id"
+                  name="ustaz_id"
+                  value={formData.ustaz_id}
+                  onChange={handleChange}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">No specific Ustaz (all can access)</option>
+                  {ustaz.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name}
                     </option>
                   ))}
                 </select>
