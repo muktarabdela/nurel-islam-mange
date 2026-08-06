@@ -36,6 +36,7 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
     class_id: '',
     is_active: true,
     paid_first_month: false,
+    paid_second_month: false,
     is_summer_student: false,
     is_free_student: false,
     is_new_student: false
@@ -58,6 +59,7 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         class_id: student.class_id || '',
         is_active: student.is_active ?? true,
         paid_first_month: student.paid_first_month ?? false,
+        paid_second_month: student.paid_second_month ?? false,
         is_summer_student: student.is_summer_student ?? false,
         is_free_student: student.is_free_student ?? false,
         is_new_student: student.is_new_student ?? false
@@ -74,6 +76,7 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         class_id: '',
         is_active: true,
         paid_first_month: false,
+        paid_second_month: false,
         is_summer_student: false,
         is_free_student: false,
         is_new_student: false
@@ -112,7 +115,7 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
         class_id: formData.class_id.trim() || null,
         is_active: formData.is_active,
         paid_first_month: formData.paid_first_month,
-        paid_second_month: student?.paid_second_month ?? false,
+        paid_second_month: formData.paid_second_month,
         is_summer_student: formData.is_summer_student,
         is_free_student: formData.is_free_student,
         is_new_student: formData.is_new_student
@@ -316,6 +319,20 @@ export default function StudentModal({ isOpen, onClose, student, onSuccess }: St
                 />
                 <label htmlFor="paid_first_month" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Paid First Month
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="paid_second_month"
+                  id="paid_second_month"
+                  checked={formData.paid_second_month}
+                  onChange={handleChange}
+                  className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                />
+                <label htmlFor="paid_second_month" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Paid Second Month
                 </label>
               </div>
 
