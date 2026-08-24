@@ -30,8 +30,7 @@ export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedUstaz, setSelectedUstaz] = useState('all');
-  const [filterStudentType, setFilterStudentType] = useState<'all' | 'summer' | 'free' | 'regular' | 'inactive' | 'new' | 'summer-unpaid' | 'summer-paid'>('all');
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+const [filterStudentType, setFilterStudentType] = useState<'all' | 'summer' | 'free' | 'regular' | 'inactive' | 'new' | 'summer-unpaid' | 'summer-paid' | 'paid-free'>('all');  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [classUstazAssignments, setClassUstazAssignments] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -84,10 +83,14 @@ export default function StudentsPage() {
     } else if (filterStudentType === 'new') {
       matchesStudentType = student.is_new_student === true;
     } else if (filterStudentType === 'summer-unpaid') {
-      matchesStudentType = student.is_summer_student === true && student.paid_second_month === false;
-    } else if (filterStudentType === 'summer-paid') {
+      matchesStudentType = student.is_summer_student === true && student.paid_second_month === false && student.is_free_student === false;
+  } else if (filterStudentType === 'summer-paid') {
       matchesStudentType = student.is_summer_student === true && student.paid_second_month === true;
+    } else if (filterStudentType === 'paid-free') {
+      matchesStudentType = student.is_free_student === true && (student.paid_first_month === true || student.paid_second_month === true);
     }
+
+    return matchesSearch && matchesClass && matchesUstaz && matchesStudentType;
 
     return matchesSearch && matchesClass && matchesUstaz && matchesStudentType;
   });
@@ -214,8 +217,7 @@ export default function StudentsPage() {
                       <label className="text-sm font-medium text-muted-foreground" htmlFor="student-type-filter">
                         Student Type
                       </label>
-                      <Select value={filterStudentType} onValueChange={(value: 'all' | 'summer' | 'free' | 'regular' | 'inactive' | 'new' | 'summer-unpaid' | 'summer-paid') => setFilterStudentType(value)}>
-                        <SelectTrigger>
+<Select value={filterStudentType} onValueChange={(value: 'all' | 'summer' | 'free' | 'regular' | 'inactive' | 'new' | 'summer-unpaid' | 'summer-paid' | 'paid-free') => setFilterStudentType(value)}>                        <SelectTrigger>
                           <SelectValue placeholder="Filter by type" />
                         </SelectTrigger>
                         <SelectContent>
@@ -227,6 +229,7 @@ export default function StudentsPage() {
                           <SelectItem value="new">New Students</SelectItem>
                           <SelectItem value="summer-unpaid"> (Unpaid 2nd Month)</SelectItem>
                           <SelectItem value="summer-paid"> (Paid 2nd Month)</SelectItem>
+                          <SelectItem value="paid-free"> (Paid Free Students)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
