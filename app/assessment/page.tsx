@@ -28,6 +28,7 @@ export default function AssessmentPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [filteredAssessments, setFilteredAssessments] = useState<AssessmentModel[]>([]);
+  const [selectedUstazFilter, setSelectedUstazFilter] = useState<string>('');
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -35,28 +36,37 @@ export default function AssessmentPage() {
     }
   }, [router]);
 
-  // Filter assessments based on user role
+  // Filter assessments based on user role and ustaz filter
   useEffect(() => {
+    let filtered: AssessmentModel[] = [];
+
     if (isAdmin()) {
-      // Admins see all assessments
-      setFilteredAssessments(assessments);
+      // Admins see all assessments, then apply ustaz filter if selected
+      filtered = assessments;
     } else {
       const currentUstaz = getUstazFromSession();
       if (currentUstaz) {
         // Ustaz sees assessments assigned to them OR those with no specific ustaz (null)
-        setFilteredAssessments(
-          assessments.filter(
-            (assessment) => 
-              assessment.ustaz_id === currentUstaz.id || 
-              assessment.ustaz_id === null
-          )
+        filtered = assessments.filter(
+          (assessment) => 
+            assessment.ustaz_id === currentUstaz.id || 
+            assessment.ustaz_id === null
         );
       } else {
         // If no ustaz session, show nothing
-        setFilteredAssessments([]);
+        filtered = [];
       }
     }
-  }, [assessments]);
+
+    // Apply ustaz filter if selected (for admins)
+    if (selectedUstazFilter) {
+      filtered = filtered.filter(
+        (assessment) => assessment.ustaz_id === selectedUstazFilter
+      );
+    }
+
+    setFilteredAssessments(filtered);
+  }, [assessments, selectedUstazFilter]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -295,7 +305,29 @@ export default function AssessmentPage() {
       {/* Assessments List */}
       <div className="bg-white rounded-lg border shadow-sm">
         <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4">All Assessments</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <h2 className="text-xl font-semibold">All Assessments</h2>
+            {isAdmin() && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="ustaz-filter" className="text-sm font-medium">
+                  Filter by Ustaz:
+                </label>
+                <select
+                  id="ustaz-filter"
+                  value={selectedUstazFilter}
+                  onChange={(e) => setSelectedUstazFilter(e.target.value)}
+                  className="flex h-9 w-full sm:w-auto rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">All Ustazs</option>
+                  {ustaz.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
           
           {filteredAssessments.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">

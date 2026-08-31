@@ -458,7 +458,7 @@ export default function ClassDetailPage() {
               </div> */}
 
               {/* Class Assessments Table */}
-              <div>
+              {/* <div>
                 <h3 className="text-sm font-semibold mb-3">Class Assessments</h3>
                 <div className="border rounded-xl overflow-hidden">
                   <Table>
@@ -506,7 +506,7 @@ export default function ClassDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
-              </div>
+              </div> */}
             </CardContent>
           </Card>
 

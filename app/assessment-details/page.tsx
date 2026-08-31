@@ -7,6 +7,7 @@ import { AssessmentModel, AssessmentType } from '@/models/Assessment';
 import { StudentMarkModel } from '@/models/StudentMark';
 import { StudentModel } from '@/models/Student';
 import { ClassModel } from '@/models/Class';
+import { UstazModel } from '@/models/Ustaz';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from "@/components/Sidebar";
 import TopNavBar from "@/components/TopNavBar";
@@ -34,6 +35,7 @@ export default function AssessmentDetailsPage() {
     assessments, 
     studentMarks, 
     students, 
+    ustaz, 
     loading, 
     error: dataError 
   } = useData();
@@ -42,6 +44,7 @@ export default function AssessmentDetailsPage() {
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [selectedAssessmentType, setSelectedAssessmentType] = useState<string>('all');
   const [selectedAssessment, setSelectedAssessment] = useState<string>('all');
+  const [selectedUstaz, setSelectedUstaz] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -57,9 +60,10 @@ export default function AssessmentDetailsPage() {
       if (selectedClass !== 'all' && assessment.class_id !== selectedClass) return false;
       if (selectedAssessmentType !== 'all' && assessment.type !== selectedAssessmentType) return false;
       if (selectedAssessment !== 'all' && assessment.id !== selectedAssessment) return false;
+      if (selectedUstaz !== 'all' && assessment.ustaz_id !== selectedUstaz) return false;
       return true;
     });
-  }, [assessments, selectedClass, selectedAssessmentType, selectedAssessment]);
+  }, [assessments, selectedClass, selectedAssessmentType, selectedAssessment, selectedUstaz]);
 
   // Filter students based on selected class
   const filteredStudents = useMemo(() => {
@@ -70,7 +74,7 @@ export default function AssessmentDetailsPage() {
   // Reset page when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [selectedClass, selectedStudent, selectedAssessmentType, selectedAssessment, searchQuery]);
+  }, [selectedClass, selectedStudent, selectedAssessmentType, selectedAssessment, selectedUstaz, searchQuery]);
 
   // Helper functions
   const getAssessmentTypeLabel = (type: AssessmentType) => {
@@ -125,6 +129,7 @@ export default function AssessmentDetailsPage() {
         
         if (selectedClass !== 'all' && assessment.class_id !== selectedClass) return false;
         if (selectedAssessmentType !== 'all' && assessment.type !== selectedAssessmentType) return false;
+        if (selectedUstaz !== 'all' && assessment.ustaz_id !== selectedUstaz) return false;
         
         return true;
       });
@@ -158,7 +163,7 @@ export default function AssessmentDetailsPage() {
 
     // Sort by average score descending
     return filteredBySearch.sort((a, b) => b.averageScore - a.averageScore);
-  }, [filteredStudents, studentMarks, assessments, selectedClass, selectedAssessmentType, selectedAssessment, searchQuery, classes]);
+  }, [filteredStudents, studentMarks, assessments, selectedClass, selectedAssessmentType, selectedAssessment, selectedUstaz, searchQuery, classes]);
 
   // Calculate overall statistics
   const overallStats = useMemo(() => {
@@ -209,6 +214,7 @@ export default function AssessmentDetailsPage() {
     setSelectedStudent('all');
     setSelectedAssessmentType('all');
     setSelectedAssessment('all');
+    setSelectedUstaz('all');
     setSearchQuery('');
     setCurrentPage(1);
   };
@@ -282,7 +288,7 @@ export default function AssessmentDetailsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Class</label>
                   <Select value={selectedClass} onValueChange={setSelectedClass}>
@@ -345,6 +351,23 @@ export default function AssessmentDetailsPage() {
                       {filteredAssessments.map((assessment) => (
                         <SelectItem key={assessment.id} value={assessment.id}>
                           {assessment.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Ustaz</label>
+                  <Select value={selectedUstaz} onValueChange={setSelectedUstaz}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Ustaz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Ustaz</SelectItem>
+                      {ustaz.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
