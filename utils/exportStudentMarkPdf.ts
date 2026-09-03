@@ -12,10 +12,11 @@ export interface ExportStudentMarkOptions {
   assessments: AssessmentModel[];
   studentMarks: StudentMarkModel[];
   className: string;
+  ustazName?: string;
 }
 
 export function exportStudentMarksToPDF(options: ExportStudentMarkOptions) {
-  const { students, assessments, studentMarks, className } = options;
+  const { students, assessments, studentMarks, className, ustazName } = options;
   
   // Create new PDF document
   const doc = new jsPDF();
@@ -44,6 +45,11 @@ export function exportStudentMarksToPDF(options: ExportStudentMarkOptions) {
   
   doc.text(`Class: ${className}`, 14, currentY);
   currentY += 8;
+  
+  if (ustazName) {
+    doc.text(`Ustaz: ${ustazName}`, 14, currentY);
+    currentY += 8;
+  }
   
   doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, currentY);
   currentY += 8;

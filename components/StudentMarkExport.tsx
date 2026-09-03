@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '@/context/dataContext';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, User } from 'lucide-react';
 import { exportStudentMarksToPDF } from '@/utils/exportStudentMarkPdf';
 
 interface StudentMarkExportProps {
@@ -17,12 +17,39 @@ interface StudentMarkExportProps {
 }
 
 export function StudentMarkExport({ isOpen, onClose, classId, className }: StudentMarkExportProps) {
-  const { students, assessments, studentMarks, loading } = useData();
+  const { students, assessments, studentMarks, loading, ustaz, classUstaz } = useData();
   const [selectedAssessmentIds, setSelectedAssessmentIds] = useState<string[]>([]);
+  const [selectedUstazId, setSelectedUstazId] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
+
+  // Reset selections when dialog opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedAssessmentIds([]);
+      setSelectedUstazId('all');
+    }
+  }, [isOpen]);
+
+  // Get ustazs assigned to this class
+  const classUstazs = classUstaz.filter(cu => cu.class_id === classId);
+  const assignedUstazs = ustaz.filter(u => classUstazs.some(cu => cu.ustaz_id === u.id));
 
   // Get assessments for this class
   const classAssessments = assessments.filter(a => a.class_id === classId);
+
+  // Filter assessments based on selected ustaz and completion status
+  const filteredAssessments = selectedUstazId !== 'all'
+    ? classAssessments.filter(a => {
+        // Must be assigned to selected ustaz OR have no specific ustaz (ustaz can still mark)
+        if (a.ustaz_id && a.ustaz_id !== selectedUstazId) return false;
+        
+        // Must have marks recorded by this ustaz (completed)
+        const hasMarks = studentMarks.some(
+          m => m.assessment_id === a.id && m.recorded_by === selectedUstazId
+        );
+        return hasMarks;
+      })
+    : classAssessments;
 
   // Get active students in this class
   const activeStudents = students.filter(student => student.class_id === classId && student.is_active);
@@ -46,11 +73,24 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
 
   // Handle select all assessments
   const handleSelectAll = () => {
-    if (selectedAssessmentIds.length === classAssessments.length) {
+    if (selectedAssessmentIds.length === filteredAssessments.length) {
       setSelectedAssessmentIds([]);
     } else {
-      setSelectedAssessmentIds(classAssessments.map(a => a.id));
+      setSelectedAssessmentIds(filteredAssessments.map(a => a.id));
     }
+  };
+
+  // Handle ustaz selection change
+  const handleUstazChange = (ustazId: string) => {
+    setSelectedUstazId(ustazId);
+    setSelectedAssessmentIds([]); // Reset assessment selection when ustaz changes
+  };
+
+  // Check if assessment is completed by specific ustaz
+  const isAssessmentCompletedByUstaz = (assessmentId: string, ustazId: string) => {
+    return studentMarks.some(
+      m => m.assessment_id === assessmentId && m.recorded_by === ustazId
+    );
   };
 
   // Handle export
@@ -59,13 +99,15 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
 
     setIsExporting(true);
     try {
-      const selectedAssessments = classAssessments.filter(a => selectedAssessmentIds.includes(a.id));
+      const selectedAssessments = filteredAssessments.filter(a => selectedAssessmentIds.includes(a.id));
+      const selectedUstaz = selectedUstazId !== 'all' ? ustaz.find(u => u.id === selectedUstazId) : undefined;
       
       exportStudentMarksToPDF({
         students: activeStudents,
         assessments: selectedAssessments,
         studentMarks: filteredStudentMarks,
-        className: className
+        className: className,
+        ustazName: selectedUstaz?.full_name
       });
       setIsExporting(false);
       handleExportSuccess();
@@ -90,7 +132,7 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -109,6 +151,32 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
             </Badge>
           </div>
 
+          {/* Ustaz Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Filter by Ustaz
+            </label>
+            <Select value={selectedUstazId} onValueChange={handleUstazChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Ustazs (show all assessments)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Ustazs (show all assessments)</SelectItem>
+                {assignedUstazs.map((ustaz) => (
+                  <SelectItem key={ustaz.id} value={ustaz.id}>
+                    {ustaz.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedUstazId !== 'all' && (
+              <p className="text-xs text-muted-foreground">
+                Showing only completed assessments by selected ustaz
+              </p>
+            )}
+          </div>
+
           {/* Assessment Selection */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -117,17 +185,21 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                disabled={loading || classAssessments.length === 0}
+                disabled={loading || filteredAssessments.length === 0}
               >
-                {selectedAssessmentIds.length === classAssessments.length ? 'Deselect All' : 'Select All'}
+                {selectedAssessmentIds.length === filteredAssessments.length ? 'Deselect All' : 'Select All'}
               </Button>
             </div>
             
-            {classAssessments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No assessments found for this class.</p>
+            {filteredAssessments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {selectedUstazId !== 'all' 
+                  ? 'No completed assessments found for this ustaz.' 
+                  : 'No assessments found for this class.'}
+              </p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3">
-                {classAssessments.map((assessment) => (
+                {filteredAssessments.map((assessment) => (
                   <div
                     key={assessment.id}
                     className="flex items-center gap-2 p-2 hover:bg-muted rounded cursor-pointer"
@@ -143,6 +215,9 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
                       <div className="text-sm font-medium">{assessment.title}</div>
                       <div className="text-xs text-muted-foreground">
                         {assessment.type} • {assessment.total_marks} marks
+                        {selectedUstazId !== 'all' && isAssessmentCompletedByUstaz(assessment.id, selectedUstazId) && (
+                          <span className="ml-2 text-green-600">✓ Completed</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -160,6 +235,14 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
                   <span className="text-sm text-gray-600">Class:</span>
                   <Badge variant="secondary">{className}</Badge>
                 </div>
+                {selectedUstazId !== 'all' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Ustaz:</span>
+                    <Badge variant="outline">
+                      {ustaz.find(u => u.id === selectedUstazId)?.full_name}
+                    </Badge>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">Assessments:</span>
                   <Badge variant="default">{selectedAssessmentIds.length}</Badge>
@@ -192,11 +275,17 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
           </div>
 
           {/* Status Messages */}
-          {!canExport && classAssessments.length > 0 && (
+          {!canExport && filteredAssessments.length > 0 && (
             <p className="text-sm text-amber-600">
               {activeStudents.length === 0 
                 ? 'No active students found in this class.'
                 : 'Please select at least one assessment to export.'}
+            </p>
+          )}
+          
+          {filteredAssessments.length === 0 && selectedUstazId !== 'all' && (
+            <p className="text-sm text-amber-600">
+              This ustaz hasn't completed any assessments yet. Select "All Ustazs" to see all assessments.
             </p>
           )}
         </div>

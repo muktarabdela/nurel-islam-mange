@@ -83,65 +83,72 @@ export default function ClassDetailPage() {
   }, [studentMarks, assessments, classId]);
 
   // Process students using the fetched stats
-  const processedStudents = useMemo(() => {
-    return students.map(student => {
-      const stats = studentStatsMap[student.id] || { present: 0, absent: 0, late: 0, total: 0 };
-      
-      const presentPct = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
-      
-      // Get student's assessment scores
-      const studentAssessmentData = classStudentMarks.filter(m => m.student_id === student.id);
-      
-      // Calculate overall assessment average
-      const validMarks = studentAssessmentData.filter(m => m.score !== null && !m.is_excused);
-      const totalAssessmentScore = validMarks.reduce((sum, m) => {
-        const assessment = assessments.find(a => a.id === m.assessment_id);
-        if (!assessment) return sum;
-        return sum + ((m.score || 0) / assessment.total_marks) * 100;
-      }, 0);
-      const overallAssessmentAvg = validMarks.length > 0 ? totalAssessmentScore / validMarks.length : 0;
-      
-      // Get score for specific assessment if filtered
-      let specificAssessmentScore = null;
-      let specificScoreActual = null;
-      if (selectedAssessmentFilter !== 'all') {
-        const specificMark = studentAssessmentData.find(m => m.assessment_id === selectedAssessmentFilter);
-        if (specificMark && specificMark.score !== null && !specificMark.is_excused) {
-          const assessment = assessments.find(a => a.id === selectedAssessmentFilter);
-          if (assessment) {
-            specificAssessmentScore = ((specificMark.score / assessment.total_marks) * 100);
-            specificScoreActual = specificMark.score;
-          }
-        }
-      }
+// Process students using the fetched stats
+const processedStudents = useMemo(() => {
+  return students.map(student => {
+    // 1. ATTENDANCE LOGIC
+    const stats = studentStatsMap[student.id] || { present: 0, absent: 0, late: 0, total: 0 };
+    const presentPct = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+    
+    // Parent Communication Logic
+    const needsCommunication = (stats.absent >= 4) || (stats.late >= 10);
+    let reason = "";
+    if (stats.absent >= 4) reason = `Need Parent Comm. (Absents: ${stats.absent}/${stats.total})`;
+    else if (stats.late >= 10) reason = `Need Parent Comm. (Lates: ${stats.late}/${stats.total})`;
 
-      // Calculate total marks sum for all assessments
-      const totalMarksSum = validMarks.reduce((sum, m) => sum + (m.score || 0), 0);
-      
-      // LOGIC: 4 absent in last 20 OR 10 late in last 20
-      const needsCommunication = (stats.absent >= 4) || (stats.late >= 10);
-      
-      let reason = "";
-      if (stats.absent >= 4) {
-        reason = `Need Parent Communication (Absents: ${stats.absent}/${stats.total})`;
-      } else if (stats.late >= 10) {
-        reason = `Need Parent Communication (Lates: ${stats.late}/${stats.total})`;
-      }
+    // 2. ASSESSMENT LOGIC
+    const studentAssessmentData = classStudentMarks.filter(m => m.student_id === student.id);
+    
+    // Only count assessments that are graded and NOT excused
+    const validMarks = studentAssessmentData.filter(m => m.score !== null && !m.is_excused);
+    
+    // Calculate accurate Total Points System average
+    let totalAchievedScore = 0;
+    let totalPossibleScore = 0;
 
-      return {
-        ...student,
-        stats: { ...stats, presentPct, needsCommunication, reason },
-        assessmentData: {
-          overallAverage: overallAssessmentAvg,
-          totalAssessments: validMarks.length,
-          specificScore: specificAssessmentScore,
-          specificScoreActual: specificScoreActual,
-          totalMarksSum: totalMarksSum
-        }
-      };
+    validMarks.forEach((m) => {
+      const assessment = assessments.find(a => a.id === m.assessment_id);
+      if (assessment && m.score !== null) {
+        totalAchievedScore += m.score;
+        totalPossibleScore += assessment.total_marks;
+      }
     });
-  }, [students, studentStatsMap, classStudentMarks, assessments, selectedAssessmentFilter]);
 
+    const overallAssessmentAvg = totalPossibleScore > 0 
+      ? (totalAchievedScore / totalPossibleScore) * 100 
+      : 0;
+    
+    // Logic for specific assessment filter
+    let specificAssessmentScore = null;
+    let specificScoreActual = null;
+    let specificTotalPossible = null;
+
+    if (selectedAssessmentFilter !== 'all') {
+      const specificMark = validMarks.find(m => m.assessment_id === selectedAssessmentFilter);
+      const assessment = assessments.find(a => a.id === selectedAssessmentFilter);
+      
+      if (specificMark && assessment && specificMark.score !== null) {
+        specificScoreActual = specificMark.score;
+        specificTotalPossible = assessment.total_marks;
+        specificAssessmentScore = (specificMark.score / assessment.total_marks) * 100;
+      }
+    }
+
+    return {
+      ...student,
+      stats: { ...stats, presentPct, needsCommunication, reason },
+      assessmentData: {
+        overallAverage: overallAssessmentAvg,
+        totalAssessmentsTaken: validMarks.length,
+        totalAchievedScore: totalAchievedScore,
+        totalPossibleScore: totalPossibleScore, // Important for UI to show "45/50" instead of just "45"
+        specificScore: specificAssessmentScore,
+        specificScoreActual: specificScoreActual,
+        specificTotalPossible: specificTotalPossible
+      }
+    };
+  });
+}, [students, studentStatsMap, classStudentMarks, assessments, selectedAssessmentFilter]);
   // Separate the lists
   const attentionRequired = processedStudents.filter(s => s.stats.needsCommunication);
   const goodStanding = processedStudents.filter(s => !s.stats.needsCommunication && s.stats.total > 0);
@@ -169,8 +176,8 @@ export default function ClassDetailPage() {
         return sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
       }
       if (sortBy === 'totalMarks') {
-        const totalA = a.assessmentData.totalMarksSum ?? -1;
-        const totalB = b.assessmentData.totalMarksSum ?? -1;
+        const totalA = a.assessmentData.totalAchievedScore ?? -1;
+        const totalB = b.assessmentData.totalAchievedScore ?? -1;
         return sortOrder === 'asc' ? totalA - totalB : totalB - totalA;
       }
       return 0;
@@ -582,7 +589,7 @@ export default function ClassDetailPage() {
                       <TableHead className="text-center">Late</TableHead>
                       <TableHead className="text-center">Attendance Rate</TableHead>
                       <TableHead className="text-center">Assessment Score</TableHead>
-                      <TableHead className="text-center">Total Marks</TableHead>
+                      <TableHead className="text-center">Cumulative Marks</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -618,17 +625,25 @@ export default function ClassDetailPage() {
                           <TableCell className="text-center">
                             <span className="font-semibold">{s.stats.presentPct.toFixed(1)}%</span>
                           </TableCell>
+                          {/* Overall Average */}
                           <TableCell className="text-center">
                             <span className="font-semibold">
                               {selectedAssessmentFilter !== 'all' 
-                                ? (s.assessmentData.specificScoreActual !== null ? `${s.assessmentData.specificScoreActual}/${assessments.find(a => a.id === selectedAssessmentFilter)?.total_marks || 'N/A'}` : 'N/A')
-                                : (s.assessmentData.totalAssessments > 0 ? s.assessmentData.overallAverage.toFixed(1) + '%' : 'N/A')
+                                ? (s.assessmentData.specificScoreActual !== null 
+                                    ? `${s.assessmentData.specificScoreActual} / ${s.assessmentData.specificTotalPossible}` 
+                                    : 'N/A')
+                                : (s.assessmentData.totalAssessmentsTaken > 0 
+                                    ? `${s.assessmentData.overallAverage.toFixed(1)}%` 
+                                    : 'N/A')
                               }
                             </span>
                           </TableCell>
+                          {/* Cumulative Marks Context */}
                           <TableCell className="text-center">
-                            <span className="font-semibold">
-                              {s.assessmentData.totalAssessments > 0 ? s.assessmentData.totalMarksSum.toFixed(1) : 'N/A'}
+                            <span className="font-semibold text-muted-foreground">
+                              {s.assessmentData.totalAssessmentsTaken > 0 
+                                ? `${s.assessmentData.totalAchievedScore} / ${s.assessmentData.totalPossibleScore}` 
+                                : 'N/A'}
                             </span>
                           </TableCell>
                         </TableRow>

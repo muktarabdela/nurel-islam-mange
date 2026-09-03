@@ -21,7 +21,7 @@ import {
 
 export default function AssessmentPage() {
   const router = useRouter();
-  const { classes, assessments, refreshData, loading, error: dataError, ustaz } = useData();
+  const { classes, assessments, refreshData, loading, error: dataError, ustaz, studentMarks } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<AssessmentModel | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -29,6 +29,7 @@ export default function AssessmentPage() {
   const [success, setSuccess] = useState('');
   const [filteredAssessments, setFilteredAssessments] = useState<AssessmentModel[]>([]);
   const [selectedUstazFilter, setSelectedUstazFilter] = useState<string>('');
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('');
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -65,8 +66,15 @@ export default function AssessmentPage() {
       );
     }
 
+    // Apply class filter if selected
+    if (selectedClassFilter) {
+      filtered = filtered.filter(
+        (assessment) => assessment.class_id === selectedClassFilter
+      );
+    }
+
     setFilteredAssessments(filtered);
-  }, [assessments, selectedUstazFilter]);
+  }, [assessments, selectedUstazFilter, selectedClassFilter, studentMarks]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -242,6 +250,17 @@ export default function AssessmentPage() {
     return u?.full_name || 'Unknown Ustaz';
   };
 
+  const isAssessmentCompleted = (assessment: AssessmentModel) => {
+    // Check if the assigned ustaz has recorded any marks for this assessment
+    if (!assessment.ustaz_id) return false;
+    
+    const marksForAssessment = studentMarks.filter(
+      (mark) => mark.assessment_id === assessment.id && mark.recorded_by === assessment.ustaz_id
+    );
+    
+    return marksForAssessment.length > 0;
+  };
+
   if (loading) {
     return (
       <div className="flex bg-background min-h-screen font-body-md antialiased text-on-background">
@@ -307,26 +326,48 @@ export default function AssessmentPage() {
         <div className="p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h2 className="text-xl font-semibold">All Assessments</h2>
-            {isAdmin() && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              {/* Class Filter - Available to all users */}
               <div className="flex items-center gap-2">
-                <label htmlFor="ustaz-filter" className="text-sm font-medium">
-                  Filter by Ustaz:
+                <label htmlFor="class-filter" className="text-sm font-medium">
+                  Filter by Class:
                 </label>
                 <select
-                  id="ustaz-filter"
-                  value={selectedUstazFilter}
-                  onChange={(e) => setSelectedUstazFilter(e.target.value)}
+                  id="class-filter"
+                  value={selectedClassFilter}
+                  onChange={(e) => setSelectedClassFilter(e.target.value)}
                   className="flex h-9 w-full sm:w-auto rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
-                  <option value="">All Ustazs</option>
-                  {ustaz.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name}
+                  <option value="">All Classes</option>
+                  {classes.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name}
                     </option>
                   ))}
                 </select>
               </div>
-            )}
+              {/* Ustaz Filter - Only for admins */}
+              {isAdmin() && (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="ustaz-filter" className="text-sm font-medium">
+                    Filter by Ustaz:
+                  </label>
+                  <select
+                    id="ustaz-filter"
+                    value={selectedUstazFilter}
+                    onChange={(e) => setSelectedUstazFilter(e.target.value)}
+                    className="flex h-9 w-full sm:w-auto rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <option value="">All Ustazs</option>
+                    {ustaz.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
           
           {filteredAssessments.length === 0 ? (
@@ -354,6 +395,11 @@ export default function AssessmentPage() {
                         ) : (
                           <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
                             Draft
+                          </span>
+                        )}
+                        {isAssessmentCompleted(assessment) && (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                            ✓ Completed
                           </span>
                         )}
                       </div>
