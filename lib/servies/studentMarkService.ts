@@ -103,5 +103,16 @@ export const studentMarkService = {
 
     if (error) throw new Error(error.message);
     return data || [];
+  },
+
+  async isAssessmentCompletedByUstaz(assessmentId: string, ustazId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select('id')
+      .eq('assessment_id', assessmentId)
+      .eq('recorded_by', ustazId);
+
+    if (error) throw new Error(error.message);
+    return (data && data.length > 0) || false;
   }
 };

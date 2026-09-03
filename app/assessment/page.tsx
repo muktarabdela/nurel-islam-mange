@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useData } from '@/context/dataContext';
 import { assessmentService } from '@/lib/servies/assessmentService';
+import { studentService } from '@/lib/servies/studentService';
+import { studentMarkService } from '@/lib/servies/studentMarkService';
 import { AssessmentModel, AssessmentType } from '@/models/Assessment';
 import { ClassModel } from '@/models/Class';
 import { isAuthenticated, getUstazFromSession, isAdmin } from '@/lib/auth';
@@ -30,6 +32,9 @@ export default function AssessmentPage() {
   const [filteredAssessments, setFilteredAssessments] = useState<AssessmentModel[]>([]);
   const [selectedUstazFilter, setSelectedUstazFilter] = useState<string>('');
   const [selectedClassFilter, setSelectedClassFilter] = useState<string>('');
+  const [studentsByUstaz, setStudentsByUstaz] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [assessmentCompletionStatus, setAssessmentCompletionStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -75,6 +80,28 @@ export default function AssessmentPage() {
 
     setFilteredAssessments(filtered);
   }, [assessments, selectedUstazFilter, selectedClassFilter, studentMarks]);
+
+  // Load students when ustaz filter changes
+  useEffect(() => {
+    const loadStudentsByUstaz = async () => {
+      if (selectedUstazFilter) {
+        setLoadingStudents(true);
+        try {
+          const students = await studentService.getByUstaz(selectedUstazFilter);
+          setStudentsByUstaz(students);
+        } catch (error) {
+          console.error('Error loading students by ustaz:', error);
+          setStudentsByUstaz([]);
+        } finally {
+          setLoadingStudents(false);
+        }
+      } else {
+        setStudentsByUstaz([]);
+      }
+    };
+
+    loadStudentsByUstaz();
+  }, [selectedUstazFilter]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -251,7 +278,12 @@ export default function AssessmentPage() {
   };
 
   const isAssessmentCompleted = (assessment: AssessmentModel) => {
-    // Check if the assigned ustaz has recorded any marks for this assessment
+    // Use the cached completion status if available
+    if (assessmentCompletionStatus[assessment.id] !== undefined) {
+      return assessmentCompletionStatus[assessment.id];
+    }
+    
+    // Fall back to the original synchronous check
     if (!assessment.ustaz_id) return false;
     
     const marksForAssessment = studentMarks.filter(
@@ -260,6 +292,36 @@ export default function AssessmentPage() {
     
     return marksForAssessment.length > 0;
   };
+
+  // Check assessment completion status when filtered assessments change
+  useEffect(() => {
+    const checkCompletionStatus = async () => {
+      const status: Record<string, boolean> = {};
+      
+      for (const assessment of filteredAssessments) {
+        if (assessment.ustaz_id) {
+          try {
+            const isCompleted = await studentMarkService.isAssessmentCompletedByUstaz(
+              assessment.id, 
+              assessment.ustaz_id
+            );
+            status[assessment.id] = isCompleted;
+          } catch (error) {
+            console.error(`Error checking completion for assessment ${assessment.id}:`, error);
+            status[assessment.id] = false;
+          }
+        } else {
+          status[assessment.id] = false;
+        }
+      }
+      
+      setAssessmentCompletionStatus(status);
+    };
+
+    if (filteredAssessments.length > 0) {
+      checkCompletionStatus();
+    }
+  }, [filteredAssessments]);
 
   if (loading) {
     return (

@@ -68,5 +68,36 @@ export const studentService = {
       .eq('id', id);
 
     if (error) throw new Error(error.message);
+  },
+
+  async getByUstaz(ustazId: string): Promise<StudentModel[]> {
+    // First get all assessments assigned to this ustaz
+    const { data: assessmentsData, error: assessmentsError } = await supabase
+      .from('assessments')
+      .select('class_id')
+      .eq('ustaz_id', ustazId);
+
+    if (assessmentsError) throw new Error(assessmentsError.message);
+
+    if (!assessmentsData || assessmentsData.length === 0) {
+      return [];
+    }
+
+    // Get unique class IDs from assessments
+    const classIds = [...new Set(assessmentsData.map(a => a.class_id).filter(Boolean))];
+
+    if (classIds.length === 0) {
+      return [];
+    }
+
+    // Get students in those classes
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select('*')
+      .in('class_id', classIds)
+      .eq('is_active', true);
+
+    if (error) throw new Error(error.message);
+    return data || [];
   }
 };

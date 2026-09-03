@@ -103,5 +103,36 @@ export const assessmentService = {
       .eq('id', id);
 
     if (error) throw new Error(error.message);
+  },
+
+  async getStudentsByUstaz(ustazId: string): Promise<any[]> {
+    // Get all classes this ustaz has assessments for
+    const { data: assessmentsData, error: assessmentsError } = await supabase
+      .from(TABLE_NAME)
+      .select('class_id')
+      .eq('ustaz_id', ustazId);
+
+    if (assessmentsError) throw new Error(assessmentsError.message);
+
+    if (!assessmentsData || assessmentsData.length === 0) {
+      return [];
+    }
+
+    // Get unique class IDs
+    const classIds = [...new Set(assessmentsData.map(a => a.class_id).filter(Boolean))];
+
+    if (classIds.length === 0) {
+      return [];
+    }
+
+    // Get all students in those classes
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .in('class_id', classIds)
+      .eq('is_active', true);
+
+    if (error) throw new Error(error.message);
+    return data || [];
   }
 };
