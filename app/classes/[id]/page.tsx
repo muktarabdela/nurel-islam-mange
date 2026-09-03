@@ -14,11 +14,12 @@ import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, C
 import { studentService } from "@/lib/servies/studentService";
 import { classService } from "@/lib/servies/classService";
 import { attendanceService } from "@/lib/servies/attendanceService";
+import { studentMarkService } from "@/lib/servies/studentMarkService";
+import { assessmentService } from "@/lib/servies/assessmentService";
 import { StudentModel } from "@/models/Student";
 import { ClassModel } from "@/models/Class";
 import { AssessmentModel, AssessmentType } from "@/models/Assessment";
 import { StudentMarkModel } from "@/models/StudentMark";
-import { useData } from "@/context/dataContext";
 import { StudentMarkExport } from "@/components/StudentMarkExport";
 
 export default function ClassDetailPage() {
@@ -29,6 +30,8 @@ export default function ClassDetailPage() {
   const [classData, setClassData] = useState<ClassModel | null>(null);
   const [students, setStudents] = useState<StudentModel[]>([]);
   const [studentStatsMap, setStudentStatsMap] = useState<Record<string, any>>({});
+  const [classAssessments, setClassAssessments] = useState<AssessmentModel[]>([]);
+  const [classStudentMarks, setClassStudentMarks] = useState<StudentMarkModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -38,13 +41,11 @@ export default function ClassDetailPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const { assessments, studentMarks } = useData();
-
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        
+
         // Fetch class details
         const classDetails = await classService.getById(classId);
         if (!classDetails) {
@@ -61,6 +62,14 @@ export default function ClassDetailPage() {
         const stats = await attendanceService.getStudentStatsByClass(classId);
         setStudentStatsMap(stats);
 
+        // Fetch assessments for this class
+        const classAssessmentsData = await assessmentService.getByClass(classId);
+        setClassAssessments(classAssessmentsData);
+
+        // Fetch marks for this class
+        const classMarksData = await studentMarkService.getMarksByClass(classId);
+        setClassStudentMarks(classMarksData);
+
       } catch (err) {
         console.error("Failed to load class data:", err);
         setError("Failed to load class data");
@@ -73,14 +82,6 @@ export default function ClassDetailPage() {
       loadData();
     }
   }, [classId]);
-
-  // Get student marks for this class
-  const classStudentMarks = useMemo(() => {
-    return studentMarks.filter(mark => {
-      const assessment = assessments.find(a => a.id === mark.assessment_id);
-      return assessment?.class_id === classId;
-    });
-  }, [studentMarks, assessments, classId]);
 
   // Process students using the fetched stats
 // Process students using the fetched stats
@@ -98,26 +99,26 @@ const processedStudents = useMemo(() => {
 
     // 2. ASSESSMENT LOGIC
     const studentAssessmentData = classStudentMarks.filter(m => m.student_id === student.id);
-    
+
     // Only count assessments that are graded and NOT excused
     const validMarks = studentAssessmentData.filter(m => m.score !== null && !m.is_excused);
-    
+
     // Calculate accurate Total Points System average
     let totalAchievedScore = 0;
     let totalPossibleScore = 0;
 
     validMarks.forEach((m) => {
-      const assessment = assessments.find(a => a.id === m.assessment_id);
+      const assessment = classAssessments.find(a => a.id === m.assessment_id);
       if (assessment && m.score !== null) {
         totalAchievedScore += m.score;
         totalPossibleScore += assessment.total_marks;
       }
     });
 
-    const overallAssessmentAvg = totalPossibleScore > 0 
-      ? (totalAchievedScore / totalPossibleScore) * 100 
+    const overallAssessmentAvg = totalPossibleScore > 0
+      ? (totalAchievedScore / totalPossibleScore) * 100
       : 0;
-    
+
     // Logic for specific assessment filter
     let specificAssessmentScore = null;
     let specificScoreActual = null;
@@ -125,8 +126,8 @@ const processedStudents = useMemo(() => {
 
     if (selectedAssessmentFilter !== 'all') {
       const specificMark = validMarks.find(m => m.assessment_id === selectedAssessmentFilter);
-      const assessment = assessments.find(a => a.id === selectedAssessmentFilter);
-      
+      const assessment = classAssessments.find(a => a.id === selectedAssessmentFilter);
+
       if (specificMark && assessment && specificMark.score !== null) {
         specificScoreActual = specificMark.score;
         specificTotalPossible = assessment.total_marks;
@@ -148,7 +149,7 @@ const processedStudents = useMemo(() => {
       }
     };
   });
-}, [students, studentStatsMap, classStudentMarks, assessments, selectedAssessmentFilter]);
+}, [students, studentStatsMap, classStudentMarks, classAssessments, selectedAssessmentFilter]);
   // Separate the lists
   const attentionRequired = processedStudents.filter(s => s.stats.needsCommunication);
   const goodStanding = processedStudents.filter(s => !s.stats.needsCommunication && s.stats.total > 0);
@@ -185,31 +186,26 @@ const processedStudents = useMemo(() => {
     return sorted;
   }, [processedStudents, sortBy, sortOrder, selectedAssessmentFilter]);
 
-  // Get assessments for this class
-  const classAssessments = useMemo(() => {
-    return assessments.filter(a => a.class_id === classId);
-  }, [assessments, classId]);
-
   // Calculate class assessment statistics
   const classAssessmentStats = useMemo(() => {
     const totalAssessments = classAssessments.length;
     const totalMarks = classStudentMarks.filter(m => m.score !== null && !m.is_excused);
-    const averageScore = totalMarks.length > 0 
-      ? totalMarks.reduce((sum, m) => sum + (m.score || 0), 0) / totalMarks.length 
+    const averageScore = totalMarks.length > 0
+      ? totalMarks.reduce((sum, m) => sum + (m.score || 0), 0) / totalMarks.length
       : 0;
-    
+
     // Grade distribution
     const gradeDistribution = totalMarks.reduce((acc, mark) => {
-      const assessment = assessments.find(a => a.id === mark.assessment_id);
+      const assessment = classAssessments.find(a => a.id === mark.assessment_id);
       if (!assessment || mark.score === null) return acc;
-      
+
       const percentage = (mark.score / assessment.total_marks) * 100;
       if (percentage >= 90) acc.A++;
       else if (percentage >= 80) acc.B++;
       else if (percentage >= 70) acc.C++;
       else if (percentage >= 60) acc.D++;
       else acc.F++;
-      
+
       return acc;
     }, { A: 0, B: 0, C: 0, D: 0, F: 0 });
 
@@ -219,7 +215,7 @@ const processedStudents = useMemo(() => {
       averageScore,
       gradeDistribution
     };
-  }, [classAssessments, classStudentMarks, assessments]);
+  }, [classAssessments, classStudentMarks]);
 
   // Helper functions
   const getAssessmentTypeLabel = (type: AssessmentType) => {

@@ -79,5 +79,29 @@ export const studentMarkService = {
       .eq('id', id);
 
     if (error) throw new Error(error.message);
+  },
+
+  async getMarksByClass(classId: string): Promise<StudentMarkModel[]> {
+    // First get assessments for this class
+    const { data: assessmentsData, error: assessmentsError } = await supabase
+      .from('assessments')
+      .select('id')
+      .eq('class_id', classId);
+
+    if (assessmentsError) throw new Error(assessmentsError.message);
+
+    if (!assessmentsData || assessmentsData.length === 0) {
+      return [];
+    }
+
+    // Then get marks for those assessments
+    const assessmentIds = assessmentsData.map(a => a.id);
+    const { data, error } = await supabase
+      .from(TABLE_NAME)
+      .select('*')
+      .in('assessment_id', assessmentIds);
+
+    if (error) throw new Error(error.message);
+    return data || [];
   }
 };

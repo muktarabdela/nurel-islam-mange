@@ -15,6 +15,8 @@ import { formatEthiopianDate, getCurrentEthiopianDate, EthiopianDateComponents }
 import { useState, useMemo, useEffect } from "react";
 import { attendanceService } from "@/lib/servies/attendanceService";
 import { studentService } from "@/lib/servies/studentService";
+import { assessmentService } from "@/lib/servies/assessmentService";
+import { studentMarkService } from "@/lib/servies/studentMarkService";
 import { AssessmentModel, AssessmentType } from "@/models/Assessment";
 import { StudentMarkModel } from "@/models/StudentMark";
 
@@ -35,12 +37,14 @@ export default function StudentProfilePage() {
   const params = useParams();
   const studentId = params.id as string;
 
-  const { students, attendance, classes, behaviorNotes, loading, assessments, studentMarks } = useData();
+  const { students, attendance, classes, behaviorNotes, loading } = useData();
   
   const [localAttendance, setLocalAttendance] = useState<any[]>([]);
   const [fetchingLocal, setFetchingLocal] = useState(false);
   const [selectedEthiopianMonth, setSelectedEthiopianMonth] = useState<EthiopianDateComponents>(getCurrentEthiopianDate());
   const [updatingPayment, setUpdatingPayment] = useState(false);
+  const [classAssessments, setClassAssessments] = useState<AssessmentModel[]>([]);
+  const [classStudentMarks, setClassStudentMarks] = useState<StudentMarkModel[]>([]);
   
   // Get student data
   const student = students.find(s => 
@@ -70,6 +74,27 @@ useEffect(() => {
 
 // Use localAttendance instead of filtering the global context
 const studentAttendance = localAttendance;
+
+// Fetch assessments and marks for the student's class
+useEffect(() => {
+  async function loadClassData() {
+    if (!student?.class_id) return;
+    try {
+      const classId = student.class_id.toString();
+      
+      // Fetch assessments for this class
+      const classAssessmentsData = await assessmentService.getByClass(classId);
+      setClassAssessments(classAssessmentsData);
+
+      // Fetch marks for this class
+      const classMarksData = await studentMarkService.getMarksByClass(classId);
+      setClassStudentMarks(classMarksData);
+    } catch (err) {
+      console.error("Error loading class data:", err);
+    }
+  }
+  loadClassData();
+}, [student?.class_id]);
   
 
     const idExistsInGlobalList = attendance.some(a => String(a.student_id).includes(studentId));
@@ -82,10 +107,10 @@ const studentAttendance = localAttendance;
 
   // Get student's assessment marks
   const studentAssessmentMarks = useMemo(() => {
-    return studentMarks.filter(mark => 
+    return classStudentMarks.filter(mark => 
       mark.student_id?.toString().trim() === studentId?.toString().trim()
     );
-  }, [studentMarks, studentId]);
+  }, [classStudentMarks, studentId]);
 
   // Calculate assessment performance statistics
   const assessmentStats = useMemo(() => {
@@ -98,7 +123,7 @@ const studentAttendance = localAttendance;
     let averagePercentage = 0;
     if (completedAssessments > 0) {
       const totalPossible = validMarks.reduce((sum, mark) => {
-        const assessment = assessments.find(a => a.id === mark.assessment_id);
+        const assessment = classAssessments.find(a => a.id === mark.assessment_id);
         return sum + (assessment?.total_marks || 0);
       }, 0);
       averagePercentage = totalPossible > 0 ? (totalScore / totalPossible) * 100 : 0;
@@ -111,7 +136,7 @@ const studentAttendance = localAttendance;
 
     // Calculate grade distribution
     const gradeDistribution = validMarks.reduce((acc, mark) => {
-      const assessment = assessments.find(a => a.id === mark.assessment_id);
+      const assessment = classAssessments.find(a => a.id === mark.assessment_id);
       if (!assessment || mark.score === null) return acc;
       
       const percentage = (mark.score / assessment.total_marks) * 100;
@@ -132,7 +157,7 @@ const studentAttendance = localAttendance;
       lowestScore,
       gradeDistribution
     };
-  }, [studentAssessmentMarks, assessments]);
+  }, [studentAssessmentMarks, classAssessments]);
 
   // Helper functions for assessment display
   const getAssessmentTypeLabel = (type: AssessmentType) => {
@@ -639,7 +664,7 @@ const studentAttendance = localAttendance;
                             </TableRow>
                           ) : (
                             studentAssessmentMarks.map((mark) => {
-                              const assessment = assessments.find(a => a.id === mark.assessment_id);
+                              const assessment = classAssessments.find(a => a.id === mark.assessment_id);
                               if (!assessment) return null;
 
                               const assessmentClass = classes.find(c => c.id === assessment.class_id);

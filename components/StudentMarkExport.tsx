@@ -8,6 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FileText, Download, User } from 'lucide-react';
 import { exportStudentMarksToPDF } from '@/utils/exportStudentMarkPdf';
+import { assessmentService } from '@/lib/servies/assessmentService';
+import { studentMarkService } from '@/lib/servies/studentMarkService';
+import { AssessmentModel } from '@/models/Assessment';
+import { StudentMarkModel } from '@/models/StudentMark';
 
 interface StudentMarkExportProps {
   isOpen: boolean;
@@ -17,10 +21,35 @@ interface StudentMarkExportProps {
 }
 
 export function StudentMarkExport({ isOpen, onClose, classId, className }: StudentMarkExportProps) {
-  const { students, assessments, studentMarks, loading, ustaz, classUstaz } = useData();
+  const { students, ustaz, classUstaz } = useData();
+  const [classAssessments, setClassAssessments] = useState<AssessmentModel[]>([]);
+  const [classStudentMarks, setClassStudentMarks] = useState<StudentMarkModel[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedAssessmentIds, setSelectedAssessmentIds] = useState<string[]>([]);
   const [selectedUstazId, setSelectedUstazId] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
+
+  // Fetch assessments and marks for this class when dialog opens
+  useEffect(() => {
+    async function fetchData() {
+      if (isOpen && classId) {
+        setLoading(true);
+        try {
+          const [assessmentsData, marksData] = await Promise.all([
+            assessmentService.getByClass(classId),
+            studentMarkService.getMarksByClass(classId)
+          ]);
+          setClassAssessments(assessmentsData);
+          setClassStudentMarks(marksData);
+        } catch (error) {
+          console.error('Failed to fetch assessment data:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+    fetchData();
+  }, [isOpen, classId]);
 
   // Reset selections when dialog opens/closes
   useEffect(() => {
@@ -34,17 +63,14 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
   const classUstazs = classUstaz.filter(cu => cu.class_id === classId);
   const assignedUstazs = ustaz.filter(u => classUstazs.some(cu => cu.ustaz_id === u.id));
 
-  // Get assessments for this class
-  const classAssessments = assessments.filter(a => a.class_id === classId);
-
   // Filter assessments based on selected ustaz and completion status
   const filteredAssessments = selectedUstazId !== 'all'
     ? classAssessments.filter(a => {
         // Must be assigned to selected ustaz OR have no specific ustaz (ustaz can still mark)
         if (a.ustaz_id && a.ustaz_id !== selectedUstazId) return false;
-        
+
         // Must have marks recorded by this ustaz (completed)
-        const hasMarks = studentMarks.some(
+        const hasMarks = classStudentMarks.some(
           m => m.assessment_id === a.id && m.recorded_by === selectedUstazId
         );
         return hasMarks;
@@ -54,13 +80,13 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
   // Get active students in this class
   const activeStudents = students.filter(student => student.class_id === classId && student.is_active);
 
-  // Filter student marks for selected assessments
-  const filteredStudentMarks = selectedAssessmentIds.length > 0
-    ? studentMarks.filter(mark => 
-        selectedAssessmentIds.includes(mark.assessment_id) &&
-        activeStudents.some(s => s.id === mark.student_id)
-      )
-    : [];
+  // Filter student marks for selected assessments and active students
+  // If a specific ustaz is selected, only include marks recorded by that ustaz
+  const filteredStudentMarks = classStudentMarks.filter(mark =>
+    activeStudents.some(s => s.id === mark.student_id) &&
+    selectedAssessmentIds.includes(mark.assessment_id) &&
+    (selectedUstazId === 'all' || mark.recorded_by === selectedUstazId)
+  );
 
   // Handle assessment selection
   const handleAssessmentToggle = (assessmentId: string) => {
@@ -88,7 +114,7 @@ export function StudentMarkExport({ isOpen, onClose, classId, className }: Stude
 
   // Check if assessment is completed by specific ustaz
   const isAssessmentCompletedByUstaz = (assessmentId: string, ustazId: string) => {
-    return studentMarks.some(
+    return classStudentMarks.some(
       m => m.assessment_id === assessmentId && m.recorded_by === ustazId
     );
   };
