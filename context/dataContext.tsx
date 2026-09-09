@@ -11,6 +11,7 @@ import { BehaviorNoteModel } from '@/models/BehaviorNote';
 import { TodoModel } from '@/models/Todo';
 import { AssessmentModel } from '@/models/Assessment';
 import { StudentMarkModel } from '@/models/StudentMark';
+import { SubjectModel } from '@/models/subject';
 
 // Services
 import { studentService } from '@/lib/servies/studentService';
@@ -23,6 +24,7 @@ import { classUstazService } from '@/lib/servies/classUstazService'; // Adjust p
 import { ClassUstazModel } from '@/models/ClassUstaz';
 import { assessmentService } from '@/lib/servies/assessmentService';
 import { studentMarkService } from '@/lib/servies/studentMarkService';
+import { subjectService } from '@/lib/servies/subjectService';
 
 type DataContextType = {
   students: StudentModel[];
@@ -34,6 +36,7 @@ type DataContextType = {
   classUstaz: ClassUstazModel[]; // Adjust type if needed
   assessments: AssessmentModel[];
   studentMarks: StudentMarkModel[];
+  subjects: SubjectModel[];
 
   loading: boolean;
   error: string | null;
@@ -53,6 +56,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [classUstaz, setClassUstaz] = useState<ClassUstazModel[]>([]);
   const [assessments, setAssessments] = useState<AssessmentModel[]>([]);
   const [studentMarks, setStudentMarks] = useState<StudentMarkModel[]>([]);
+  const [subjects, setSubjects] = useState<SubjectModel[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +74,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         todosData,
         classUstazData,
         assessmentsData,
-        studentMarksData
+        studentMarksData,
+        subjectsData
       ] = await Promise.all([
         studentService.getAll(),
         ustazService.getAll(),
@@ -81,7 +86,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         todoService.getAll(),
         classUstazService.getAll(),
         assessmentService.getAll(),
-        studentMarkService.getAll()
+        studentMarkService.getAll(),
+        subjectService.getAll()
       ]);
 
       setStudents(studentsData);
@@ -92,6 +98,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setClassUstaz(classUstazData);
       setAssessments(assessmentsData);
       setStudentMarks(studentMarksData);
+      setSubjects(subjectsData);
 
       // Attendance → load separately (better performance)
       const attendanceData = await attendanceService.getAll();
@@ -120,6 +127,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     classUstaz,
     assessments,
     studentMarks,
+    subjects,
     loading,
     error,
     refreshData: fetchAllData,

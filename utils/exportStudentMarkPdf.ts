@@ -86,7 +86,7 @@ export function exportStudentMarksToPDF(options: ExportStudentMarkOptions) {
       }
     });
     
-    // Calculate total & average
+    // Calculate total
     const validMarks = studentMarks.filter(
       m => m.student_id === student.id && 
            assessments.some(a => a.id === m.assessment_id) &&
@@ -98,23 +98,23 @@ export function exportStudentMarksToPDF(options: ExportStudentMarkOptions) {
     const totalPossibleMarks = assessments.reduce((sum, a) => sum + a.total_marks, 0);
     row.push(totalMarks > 0 ? `${totalMarks.toFixed(1)}/${totalPossibleMarks}` : 'N/A');
     
-    if (validMarks.length > 0) {
-      const totalPercentage = validMarks.reduce((sum, m) => {
-        const assessment = assessments.find(a => a.id === m.assessment_id);
-        if (!assessment) return sum;
-        return sum + ((m.score || 0) / assessment.total_marks) * 100;
-      }, 0);
-      const average = totalPercentage / validMarks.length;
-      row.push(average.toFixed(1) + '%');
-    } else {
-      row.push('N/A');
-    }
+    // if (validMarks.length > 0) {
+    //   const totalPercentage = validMarks.reduce((sum, m) => {
+    //     const assessment = assessments.find(a => a.id === m.assessment_id);
+    //     if (!assessment) return sum;
+    //     return sum + ((m.score || 0) / assessment.total_marks) * 100;
+    //   }, 0);
+    //   const average = totalPercentage / validMarks.length;
+    //   row.push(average.toFixed(1) + '%');
+    // } else {
+    //   row.push('N/A');
+    // }
     
     return row;
   });
   
   // Prepare table headers
-  const tableHeaders = ['#', 'Student Name', ...assessments.map(a => a.title), 'Total Marks', 'Average'];
+  const tableHeaders = ['#', 'Student Name', ...assessments.map(a => a.title), 'Total Marks'];
   
   // 2. CONFIGURE AUTOTABLE FOR WIDE DATA
   autoTable(doc, {
@@ -143,7 +143,7 @@ export function exportStudentMarksToPDF(options: ExportStudentMarkOptions) {
       0: { cellWidth: 10, halign: 'center' }, // #
       1: { cellWidth: 45 }, // <-- FIX: Give Student Name a fixed width so it never shrinks
       // Notice we are NO LONGER hardcoding widths for assessments. 
-      // AutoTable will naturally divide the remaining space for assessments, totals, and averages.
+      // AutoTable will naturally divide the remaining space for assessments and totals.
     }
   });
   

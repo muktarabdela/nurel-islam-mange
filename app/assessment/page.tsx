@@ -23,7 +23,7 @@ import {
 
 export default function AssessmentPage() {
   const router = useRouter();
-  const { classes, assessments, refreshData, loading, error: dataError, ustaz, studentMarks } = useData();
+  const { classes, assessments, refreshData, loading, error: dataError, ustaz, studentMarks, subjects } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<AssessmentModel | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -111,7 +111,8 @@ export default function AssessmentPage() {
     description: '',
     date: '',
     ethiopian_date: '',
-    ustaz_id: ''
+    ustaz_id: '',
+    subject_id: ''
   });
 
   const isEditing = !!editingAssessment;
@@ -126,7 +127,8 @@ export default function AssessmentPage() {
         description: editingAssessment.description || '',
         date: editingAssessment.date || '',
         ethiopian_date: editingAssessment.ethiopian_date || '',
-        ustaz_id: editingAssessment.ustaz_id || ''
+        ustaz_id: editingAssessment.ustaz_id || '',
+        subject_id: editingAssessment.subject_id || ''
       });
     } else {
       setFormData({
@@ -137,7 +139,8 @@ export default function AssessmentPage() {
         description: '',
         date: '',
         ethiopian_date: '',
-        ustaz_id: ''
+        ustaz_id: '',
+        subject_id: ''
       });
     }
     setError('');
@@ -171,7 +174,8 @@ export default function AssessmentPage() {
           description: formData.description.trim() || null,
           date: formData.date || null,
           ethiopian_date: formData.ethiopian_date.trim() || null,
-          ustaz_id: formData.ustaz_id || null
+          ustaz_id: formData.ustaz_id || null,
+          subject_id: formData.subject_id || undefined
         };
 
         await assessmentService.update(editingAssessment.id, updateData);
@@ -188,7 +192,8 @@ export default function AssessmentPage() {
           ethiopian_date: formData.ethiopian_date.trim() || null,
           created_by: '00000000-0000-0000-0000-000000000000', // Placeholder UUID until auth is implemented
           is_published: false,
-          ustaz_id: formData.ustaz_id || null
+          ustaz_id: formData.ustaz_id || null,
+          subject_id: formData.subject_id || undefined
         };
 
         await assessmentService.create(submitData);
@@ -204,7 +209,8 @@ export default function AssessmentPage() {
         description: '',
         date: '',
         ethiopian_date: '',
-        ustaz_id: ''
+        ustaz_id: '',
+        subject_id: ''
       }));
       setEditingAssessment(null);
       setIsModalOpen(false);
@@ -275,6 +281,12 @@ export default function AssessmentPage() {
     if (!ustazId) return 'All Ustazs';
     const u = ustaz.find(u => u.id === ustazId);
     return u?.full_name || 'Unknown Ustaz';
+  };
+
+  const getSubjectName = (subjectId: string | undefined) => {
+    if (!subjectId) return 'No specific subject';
+    const subject = subjects.find(s => s.id === subjectId);
+    return subject?.name || 'Unknown Subject';
   };
 
   const isAssessmentCompleted = (assessment: AssessmentModel) => {
@@ -466,9 +478,12 @@ export default function AssessmentPage() {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-sm text-muted-foreground">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-4 text-sm text-muted-foreground">
                         <div>
                           <span className="font-medium">Class:</span> {getClassName(assessment.class_id)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Subject:</span> {getSubjectName(assessment.subject_id)}
                         </div>
                         <div>
                           <span className="font-medium">Assigned Ustaz:</span> {getUstazName(assessment.ustaz_id)}
@@ -584,6 +599,27 @@ export default function AssessmentPage() {
                   {classes.map((cls) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subject Selection */}
+              <div className="grid gap-2">
+                <label htmlFor="subject_id" className="text-sm font-medium">
+                  Subject
+                </label>
+                <select
+                  id="subject_id"
+                  name="subject_id"
+                  value={formData.subject_id}
+                  onChange={handleChange}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">No specific subject</option>
+                  {subjects.filter(s => s.is_active).map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name}
                     </option>
                   ))}
                 </select>
