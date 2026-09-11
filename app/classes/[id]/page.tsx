@@ -16,10 +16,12 @@ import { classService } from "@/lib/servies/classService";
 import { attendanceService } from "@/lib/servies/attendanceService";
 import { studentMarkService } from "@/lib/servies/studentMarkService";
 import { assessmentService } from "@/lib/servies/assessmentService";
+import { subjectService } from "@/lib/servies/subjectService";
 import { StudentModel } from "@/models/Student";
 import { ClassModel } from "@/models/Class";
 import { AssessmentModel, AssessmentType } from "@/models/Assessment";
 import { StudentMarkModel } from "@/models/StudentMark";
+import { SubjectModel } from "@/models/subject";
 import { StudentMarkExport } from "@/components/StudentMarkExport";
 
 export default function ClassDetailPage() {
@@ -32,12 +34,13 @@ export default function ClassDetailPage() {
   const [studentStatsMap, setStudentStatsMap] = useState<Record<string, any>>({});
   const [classAssessments, setClassAssessments] = useState<AssessmentModel[]>([]);
   const [classStudentMarks, setClassStudentMarks] = useState<StudentMarkModel[]>([]);
+  const [subjects, setSubjects] = useState<SubjectModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
   const [selectedAssessmentFilter, setSelectedAssessmentFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'assessment' | 'totalMarks'>('attendance');
+  const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'assessment' | 'totalMarks'>('totalMarks');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
@@ -69,6 +72,12 @@ export default function ClassDetailPage() {
         // Fetch marks for this class
         const classMarksData = await studentMarkService.getMarksByClass(classId);
         setClassStudentMarks(classMarksData);
+
+        // Fetch all subjects and filter to only those used in this class's assessments
+        const allSubjects = await subjectService.getActive();
+        const classSubjectIds = new Set(classAssessmentsData.map(a => a.subject_id).filter(Boolean) as string[]);
+        const classSubjects = allSubjects.filter(subject => classSubjectIds.has(subject.id));
+        setSubjects(classSubjects);
 
       } catch (err) {
         console.error("Failed to load class data:", err);
@@ -135,6 +144,28 @@ const processedStudents = useMemo(() => {
       }
     }
 
+    // Calculate total marks per subject
+    const subjectTotals: Record<string, { totalAchieved: number; totalPossible: number }> = {};
+    
+    subjects.forEach(subject => {
+      const subjectAssessments = classAssessments.filter(a => a.subject_id === subject.id);
+      let subjectTotalAchieved = 0;
+      let subjectTotalPossible = 0;
+
+      subjectAssessments.forEach(assessment => {
+        const mark = validMarks.find(m => m.assessment_id === assessment.id);
+        if (mark && mark.score !== null) {
+          subjectTotalAchieved += mark.score;
+          subjectTotalPossible += assessment.total_marks;
+        }
+      });
+
+      subjectTotals[subject.id] = {
+        totalAchieved: subjectTotalAchieved,
+        totalPossible: subjectTotalPossible
+      };
+    });
+
     return {
       ...student,
       stats: { ...stats, presentPct, needsCommunication, reason },
@@ -146,10 +177,11 @@ const processedStudents = useMemo(() => {
         specificScore: specificAssessmentScore,
         specificScoreActual: specificScoreActual,
         specificTotalPossible: specificTotalPossible
-      }
+      },
+      subjectTotals
     };
   });
-}, [students, studentStatsMap, classStudentMarks, classAssessments, selectedAssessmentFilter]);
+}, [students, studentStatsMap, classStudentMarks, classAssessments, selectedAssessmentFilter, subjects]);
   // Separate the lists
   const attentionRequired = processedStudents.filter(s => s.stats.needsCommunication);
   const goodStanding = processedStudents.filter(s => !s.stats.needsCommunication && s.stats.total > 0);
@@ -350,7 +382,7 @@ const processedStudents = useMemo(() => {
           </div>
 
           {/* Students Needing Attention */}
-          {attentionRequired.length > 0 && (
+          {/* {attentionRequired.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="p-2 bg-red-100 rounded-lg">
@@ -374,8 +406,8 @@ const processedStudents = useMemo(() => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {attentionRequired.map((s) => (
-                        <TableRow key={s.id} className="hover:bg-red-50/50">
+                      {attentionRequired.map((s, index) => (
+                        <TableRow key={s.id} className={`hover:bg-red-50/50 ${index % 2 === 0 ? 'bg-white' : 'bg-red-50/30'}`}>
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
                               <Link href={`/students/${s.id}`} className="hover:text-primary hover:underline cursor-pointer">
@@ -406,7 +438,7 @@ const processedStudents = useMemo(() => {
                 </CardContent>
               </Card>
             </div>
-          )}
+          )} */}
 
           {/* Assessment Performance Section */}
           <Card>
@@ -584,14 +616,19 @@ const processedStudents = useMemo(() => {
                       <TableHead className="text-center">Absent</TableHead>
                       <TableHead className="text-center">Late</TableHead>
                       <TableHead className="text-center">Attendance Rate</TableHead>
+                      {subjects.map(subject => (
+                        <TableHead key={subject.id} className="text-center">
+                          {subject.name}
+                        </TableHead>
+                      ))}
                       <TableHead className="text-center">Assessment Score</TableHead>
                       <TableHead className="text-center">Cumulative Marks</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedStudents.length > 0 ? (
-                      paginatedStudents.map((s) => (
-                        <TableRow key={s.id} className="hover:bg-blue-50/50">
+                      paginatedStudents.map((s, index) => (
+                        <TableRow key={s.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-200'}`}>
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
                               <Link href={`/students/${s.id}`} className="hover:text-primary hover:underline cursor-pointer">
@@ -621,6 +658,20 @@ const processedStudents = useMemo(() => {
                           <TableCell className="text-center">
                             <span className="font-semibold">{s.stats.presentPct.toFixed(1)}%</span>
                           </TableCell>
+                          {/* Subject Totals */}
+                          {subjects.map(subject => {
+                            const subjectData = s.subjectTotals[subject.id];
+                            return (
+                              <TableCell key={subject.id} className="text-center">
+                                <span className="font-semibold text-sm">
+                                  {subjectData?.totalPossible > 0 
+                                    ? `${subjectData.totalAchieved}/${subjectData.totalPossible}`
+                                    : 'N/A'
+                                  }
+                                </span>
+                              </TableCell>
+                            );
+                          })}
                           {/* Overall Average */}
                           <TableCell className="text-center">
                             <span className="font-semibold">
@@ -646,7 +697,7 @@ const processedStudents = useMemo(() => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                        <TableCell colSpan={8 + subjects.length} className="text-center py-10 text-muted-foreground">
                           No students found in this class.
                         </TableCell>
                       </TableRow>
