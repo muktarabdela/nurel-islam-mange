@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, ChevronLeft, ChevronRight, ArrowUpDown, Filter, Download, Search } from "lucide-react";
+import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, ChevronLeft, ChevronRight, ArrowUpDown, Filter, Download, Search, Check } from "lucide-react";
 import { studentService } from "@/lib/servies/studentService";
 import { classService } from "@/lib/servies/classService";
 import { attendanceService } from "@/lib/servies/attendanceService";
@@ -45,6 +45,7 @@ export default function ClassDetailPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [markedStudents, setMarkedStudents] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function loadData() {
@@ -321,6 +322,16 @@ const processedStudents = useMemo(() => {
   const handleAssessmentFilterChange = (assessmentId: string) => {
     setSelectedAssessmentFilter(assessmentId);
     setCurrentPage(1);
+  };
+
+  const handleToggleMark = (studentId: string) => {
+    const newMarked = new Set(markedStudents);
+    if (newMarked.has(studentId)) {
+      newMarked.delete(studentId);
+    } else {
+      newMarked.add(studentId);
+    }
+    setMarkedStudents(newMarked);
   };
 
   if (loading) {
@@ -638,6 +649,7 @@ const processedStudents = useMemo(() => {
                 <Table>
                   <TableHeader className="bg-blue-50">
                     <TableRow>
+                      <TableHead className="font-bold text-blue-900 text-center w-12">Mark</TableHead>
                       <TableHead className="font-bold text-blue-900 text-center w-16">Rank</TableHead>
                       <TableHead className="font-bold text-blue-900">Student</TableHead>
                       <TableHead className="text-center">Total Records</TableHead>
@@ -657,7 +669,19 @@ const processedStudents = useMemo(() => {
                   <TableBody>
                     {paginatedStudents.length > 0 ? (
                       paginatedStudents.map((s, index) => (
-                        <TableRow key={s.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-200'}`}>
+                        <TableRow key={s.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-200'} ${markedStudents.has(s.id) ? 'bg-yellow-100 border-l-4 border-yellow-500' : ''}`}>
+                          <TableCell className="text-center">
+                            <button
+                              onClick={() => handleToggleMark(s.id)}
+                              className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                                markedStudents.has(s.id)
+                                  ? 'bg-yellow-500 border-yellow-500 text-white'
+                                  : 'border-gray-300 hover:border-yellow-500'
+                              }`}
+                            >
+                              {markedStudents.has(s.id) && <Check className="h-4 w-4" />}
+                            </button>
+                          </TableCell>
                           <TableCell className="text-center font-bold text-primary">
                             {(currentPage - 1) * itemsPerPage + index + 1}
                           </TableCell>
@@ -729,7 +753,7 @@ const processedStudents = useMemo(() => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={10 + subjects.length} className="text-center py-10 text-muted-foreground">
+                        <TableCell colSpan={11 + subjects.length} className="text-center py-10 text-muted-foreground">
                           {searchTerm ? 'No students found matching your search.' : 'No students found in this class.'}
                         </TableCell>
                       </TableRow>
