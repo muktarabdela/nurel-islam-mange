@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, ChevronLeft, ChevronRight, ArrowUpDown, Filter, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, AlertCircle, Users, Calendar, GraduationCap, Clock, Award, ChevronLeft, ChevronRight, ArrowUpDown, Filter, Download, Search } from "lucide-react";
 import { studentService } from "@/lib/servies/studentService";
 import { classService } from "@/lib/servies/classService";
 import { attendanceService } from "@/lib/servies/attendanceService";
@@ -43,6 +44,7 @@ export default function ClassDetailPage() {
   const [sortBy, setSortBy] = useState<'name' | 'attendance' | 'assessment' | 'totalMarks'>('totalMarks');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -186,9 +188,24 @@ const processedStudents = useMemo(() => {
   const attentionRequired = processedStudents.filter(s => s.stats.needsCommunication);
   const goodStanding = processedStudents.filter(s => !s.stats.needsCommunication && s.stats.total > 0);
 
+  // Filter students based on search term
+  const filteredStudents = useMemo(() => {
+    return processedStudents.filter(student => {
+      const matchesSearch =
+        student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.parent_phone?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    });
+  }, [processedStudents, searchTerm]);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   // Sort students based on selected criteria
   const sortedStudents = useMemo(() => {
-    const sorted = [...processedStudents].sort((a, b) => {
+    const sorted = [...filteredStudents].sort((a, b) => {
       if (sortBy === 'name') {
         return sortOrder === 'asc' 
           ? a.full_name.localeCompare(b.full_name)
@@ -216,7 +233,7 @@ const processedStudents = useMemo(() => {
       return 0;
     });
     return sorted;
-  }, [processedStudents, sortBy, sortOrder, selectedAssessmentFilter]);
+  }, [filteredStudents, sortBy, sortOrder, selectedAssessmentFilter]);
 
   // Calculate class assessment statistics
   const classAssessmentStats = useMemo(() => {
@@ -560,6 +577,17 @@ const processedStudents = useMemo(() => {
               
               {/* Sort and Filter Controls */}
               <div className="flex flex-wrap items-center gap-3">
+                {/* Search Input */}
+                <div className="relative w-full md:w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                    placeholder="Search by name or phone..."
+                  />
+                </div>
+
                 {/* Assessment Filter */}
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4 text-muted-foreground" />
@@ -577,7 +605,7 @@ const processedStudents = useMemo(() => {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 {/* Sort Dropdown */}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Sort by:</span>
@@ -610,6 +638,7 @@ const processedStudents = useMemo(() => {
                 <Table>
                   <TableHeader className="bg-blue-50">
                     <TableRow>
+                      <TableHead className="font-bold text-blue-900 text-center w-16">Rank</TableHead>
                       <TableHead className="font-bold text-blue-900">Student</TableHead>
                       <TableHead className="text-center">Total Records</TableHead>
                       <TableHead className="text-center">Present</TableHead>
@@ -629,6 +658,9 @@ const processedStudents = useMemo(() => {
                     {paginatedStudents.length > 0 ? (
                       paginatedStudents.map((s, index) => (
                         <TableRow key={s.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-200'}`}>
+                          <TableCell className="text-center font-bold text-primary">
+                            {(currentPage - 1) * itemsPerPage + index + 1}
+                          </TableCell>
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
                               <Link href={`/students/${s.id}`} className="hover:text-primary hover:underline cursor-pointer">
@@ -697,8 +729,8 @@ const processedStudents = useMemo(() => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8 + subjects.length} className="text-center py-10 text-muted-foreground">
-                          No students found in this class.
+                        <TableCell colSpan={10 + subjects.length} className="text-center py-10 text-muted-foreground">
+                          {searchTerm ? 'No students found matching your search.' : 'No students found in this class.'}
                         </TableCell>
                       </TableRow>
                     )}
